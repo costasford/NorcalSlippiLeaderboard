@@ -56,7 +56,7 @@ export default function HomePage() {
       <h1 className="text-3xl m-4 text-center text-white">
         {settings.title}
       </h1>
-      <div className="p-1 text-gray-300"> Updated {updateDesc}</div>
+      <div className="p-1 text-gray-300"> Biblical Hiatus</div>
       <Table players={players} />
       <div className="p-4 text-gray-300 flex flex-col">
         <div>Built by blorppppp & Modified by C4D</div>

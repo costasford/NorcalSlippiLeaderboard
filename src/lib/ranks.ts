@@ -1,4 +1,4 @@
-import { Player } from './player'
+import { Player } from './player';
 import GrandMasterIcon from '../../images/ranks/GrandMaster.svg';
 import Master1Icon from '../../images/ranks/MasterI.svg';
 import Master2Icon from '../../images/ranks/MasterII.svg';
@@ -28,32 +28,33 @@ interface Rank {
   iconUrl?: string
 }
 
-const setCount = (player: Player) => {
-  return player.rankedNetplayProfile.wins +
-    player.rankedNetplayProfile.losses;
-}
+const setCount = (player: Player) => player.rankedNetplayProfile.wins
+    + player.rankedNetplayProfile.losses;
 
 const MIN_RANK_SETS = 5;
 
 class NoneRank implements Rank {
-  public name = "None"
-  public iconUrl = NoneIcon
-  public bgClass = "bg-stone-500"
+  public name = 'None';
+
+  public iconUrl = NoneIcon;
+
+  public bgClass = 'bg-stone-500';
 
   isRank(player: Player) {
     return setCount(player) === 0;
   }
 }
 
-
 class PendingRank implements Rank {
-  public name = "Pending"
-  public iconUrl = PendingIcon
-  public bgClass = "bg-stone-700"
+  public name = 'Pending';
+
+  public iconUrl = PendingIcon;
+
+  public bgClass = 'bg-stone-700';
 
   isRank(player: Player) {
-    const totalSets = setCount(player)
-    return 0 < totalSets && totalSets < MIN_RANK_SETS;
+    const totalSets = setCount(player);
+    return totalSets > 0 && totalSets < MIN_RANK_SETS;
   }
 }
 
@@ -67,22 +68,22 @@ class StandardRank implements Rank {
   ) {}
 
   isRank(player: Player) {
-    if(setCount(player) < MIN_RANK_SETS) {
-      return false
+    if (setCount(player) < MIN_RANK_SETS) {
+      return false;
     }
-    const rating = Math.floor(100 * player.rankedNetplayProfile.ratingOrdinal) / 100; // ensure rating doesn't fall between two bounds
+    const rating = Math.floor(100 * player.rankedNetplayProfile.ratingOrdinal) / 100;
     return this.lowerBound <= rating && rating <= this.upperBound;
   }
 }
 
 class GrandMaster extends StandardRank {
   constructor() {
-    super('Grandmaster', 2191.75, Infinity, "bg-slate-900", GrandMasterIcon)
+    super('Grandmaster', 2191.75, Infinity, 'bg-slate-900', GrandMasterIcon);
   }
 
   isRank(player: Player) {
     const hasRating = super.isRank(player);
-    if(!hasRating) {
+    if (!hasRating) {
       return false;
     }
     return player.rankedNetplayProfile.dailyGlobalPlacement !== null
@@ -118,14 +119,14 @@ export const RANKS = [
   new StandardRank('Master I', 2191.75, 2274.99, INDIGO_BG, Master1Icon),
   new StandardRank('Master II', 2275, 2350, INDIGO_BG, Master2Icon),
   new StandardRank('Master III', 2350, Infinity, INDIGO_BG, Master3Icon),
-  new GrandMaster()
-]
+  new GrandMaster(),
+];
 
 export function getRank(player: Player) {
-  for(let i = RANKS.length - 1; i >= 0; i--) {
-    if(RANKS[i].isRank(player)) {
-      return RANKS[i]
+  for (let i = RANKS.length - 1; i >= 0; i -= 1) {
+    if (RANKS[i].isRank(player)) {
+      return RANKS[i];
     }
   }
-  return new NoneRank()
+  return new NoneRank();
 }

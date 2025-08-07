@@ -3,6 +3,7 @@ const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const TerserJSPlugin = require('terser-webpack-plugin');
 const CnameWebpackPlugin = require('cname-webpack-plugin');
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 const settings = require('./settings');
 
 const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
@@ -11,12 +12,22 @@ const port = 8262;
 const output = path.join(__dirname, './dist');
 const publicPath = mode === 'production' ? settings.repoPath || '/' : '/';
 
-module.exports = {
+module.exports = (env = {}) => ({
 
   mode,
   optimization: {
     minimizer: [new TerserJSPlugin({})],
     runtimeChunk: 'single',
+    splitChunks: {
+      chunks: 'all',
+      cacheGroups: {
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          chunks: 'all',
+        },
+      },
+    },
   },
 
   devServer: {
@@ -51,7 +62,8 @@ module.exports = {
 
   output: {
     path: output,
-    filename: '[name].js',
+    filename: mode === 'production' ? '[name].[contenthash].js' : '[name].js',
+    chunkFilename: mode === 'production' ? '[name].[contenthash].chunk.js' : '[name].chunk.js',
     publicPath,
   },
 
@@ -114,5 +126,6 @@ module.exports = {
     ...(mode !== 'production'
       ? [new webpack.HotModuleReplacementPlugin()]
       : [...(settings.cname ? [new CnameWebpackPlugin({ domain: settings.cname })] : [])]),
+    ...(env.analyze ? [new BundleAnalyzerPlugin()] : []),
   ],
-};
+});

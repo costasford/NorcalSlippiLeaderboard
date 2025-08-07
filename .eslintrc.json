@@ -23,6 +23,10 @@
     "react-hooks/rules-of-hooks": "error",
     "react-hooks/exhaustive-deps": "warn",
     "@typescript-eslint/no-explicit-any": "warn",
-    "linebreak-style": "off"
+    "linebreak-style": "off",
+    "import/prefer-default-export": "off",
+    "max-classes-per-file": "off",
+    "class-methods-use-this": "off",
+    "no-param-reassign": ["error", { "props": false }]
   }
 }

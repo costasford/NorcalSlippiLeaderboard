@@ -28,6 +28,14 @@ module.exports = {
     hot: true,
     historyApiFallback: true,
     open: true,
+    headers: {
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'X-XSS-Protection': '1; mode=block',
+      'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+      'Content-Security-Policy': "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: https://slp-rank.herokuapp.com; img-src 'self' data:; font-src 'self' data:"
+    },
+    allowedHosts: ['localhost', '.localhost', '127.0.0.1']
   },
 
   devtool: mode === 'production' ? false : 'eval',

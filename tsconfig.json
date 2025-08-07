@@ -1,21 +1,40 @@
 {
   "outDir": "./dist/",
   "plugins": [],
-  "include": ["./"],
-  "exclude": ["dist"],
+  "include": ["./src", "./cron"],
+  "exclude": ["dist", "node_modules"],
 
   "compilerOptions": {
     "jsx": "react-jsx",
     "esModuleInterop": true,
-    "skipLibCheck": true,
+    "skipLibCheck": false,
     "module": "commonjs",
-    "target": "es5",
+    "target": "es2020",
+    "lib": ["es2020", "dom"],
     "sourceMap": true,
     "noEmitOnError": true,
     "types": ["node"],
-    "typeRoots": ["./node_modules/@types", "./types"],
+    "typeRoots": ["./node_modules/@types", "./src/typings"],
     "baseUrl": ".",
     "resolveJsonModule": true,
-    "downlevelIteration": true
+    "downlevelIteration": true,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    
+    // Strict type checking options (gradually enable)
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictFunctionTypes": false,
+    "strictBindCallApply": false,
+    "strictPropertyInitialization": false,
+    "noImplicitThis": false,
+    "alwaysStrict": true,
+    
+    // Additional checks (gradually enable)
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": true
   }
 }

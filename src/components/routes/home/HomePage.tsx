@@ -49,7 +49,7 @@ export default function HomePage() {
     return () => {
       clearInterval(interval);
     };
-  }, []);
+  }, [updatedAt]);
 
   return (
     <div className="flex flex-col items-center h-screen p-8">

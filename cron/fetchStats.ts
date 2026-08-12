@@ -66,6 +66,106 @@ const getPlayers = async () => {
   }
 }
 
+interface HistorySnapshotEntry {
+  code: string;
+  name: string;
+  rating: number;
+}
+
+const HISTORY_RETENTION_DAYS = 35;
+const WEEKLY_MOVERS_TARGET_DAYS = 7;
+
+const toSnapshot = (players: any[]): HistorySnapshotEntry[] => players
+  .filter((p) => p?.rankedNetplayProfile)
+  .map((p) => ({
+    code: p.connectCode.code,
+    name: p.displayName,
+    rating: p.rankedNetplayProfile.ratingOrdinal,
+  }));
+
+// One snapshot per calendar day, kept for HISTORY_RETENTION_DAYS, so we can
+// compare "now" against "about a week ago" for a biggest-movers view.
+async function recordHistorySnapshot(historyDir: string, snapshot: HistorySnapshotEntry[]) {
+  await fs.mkdir(historyDir, { recursive: true });
+  const today = new Date().toISOString().slice(0, 10);
+  const todayFile = path.join(historyDir, `${today}.json`);
+
+  try {
+    await fs.access(todayFile);
+    console.log(`History snapshot for ${today} already exists, skipping.`);
+  } catch {
+    await fs.writeFile(todayFile, JSON.stringify(snapshot, null, 2));
+    console.log(`Wrote history snapshot for ${today}.`);
+  }
+
+  const cutoff = Date.now() - HISTORY_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  const files = await fs.readdir(historyDir);
+  await Promise.all(files.map(async (file) => {
+    const match = file.match(/^(\d{4}-\d{2}-\d{2})\.json$/);
+    if (!match) return;
+    if (new Date(`${match[1]}T00:00:00Z`).getTime() < cutoff) {
+      await fs.unlink(path.join(historyDir, file));
+      console.log(`Pruned old history snapshot ${file}.`);
+    }
+  }));
+}
+
+// Compares the latest snapshot against the oldest one that's at least a
+// week old (or the oldest we have, if less than a week of history exists
+// yet) and writes the top gainers/losers for the frontend to show.
+async function writeWeeklyMovers(dataDir: string, historyDir: string) {
+  const files = (await fs.readdir(historyDir))
+    .filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
+    .sort();
+
+  if (files.length < 2) {
+    console.log('Not enough history yet for weekly movers.');
+    return;
+  }
+
+  const latestFile = files[files.length - 1];
+  const targetTime = Date.now() - WEEKLY_MOVERS_TARGET_DAYS * 24 * 60 * 60 * 1000;
+  const comparisonFile = files.find(
+    (f) => new Date(`${f.slice(0, 10)}T00:00:00Z`).getTime() <= targetTime,
+  ) || files[0];
+
+  if (comparisonFile === latestFile) {
+    console.log('Only one history snapshot exists so far - skipping weekly movers.');
+    return;
+  }
+
+  const [comparisonData, latestData]: [HistorySnapshotEntry[], HistorySnapshotEntry[]] = await Promise.all([
+    fs.readFile(path.join(historyDir, comparisonFile), 'utf-8').then(JSON.parse),
+    fs.readFile(path.join(historyDir, latestFile), 'utf-8').then(JSON.parse),
+  ]);
+  const comparisonMap = new Map(comparisonData.map((p) => [p.code, p]));
+
+  const movers = latestData
+    .filter((p) => comparisonMap.has(p.code))
+    .map((p) => {
+      const old = comparisonMap.get(p.code)!;
+      return {
+        code: p.code,
+        name: p.name,
+        oldRating: old.rating,
+        newRating: p.rating,
+        delta: Math.round((p.rating - old.rating) * 10) / 10,
+      };
+    })
+    .sort((a, b) => b.delta - a.delta);
+
+  // Slice from opposite ends so a small player pool never puts the same
+  // person in both the gainers and losers lists.
+  const gainers = movers.slice(0, 5);
+  const losers = movers.slice(Math.max(5, movers.length - 5)).reverse();
+
+  await fs.writeFile(
+    path.join(dataDir, 'weekly-movers.json'),
+    JSON.stringify({ comparisonDate: comparisonFile.replace('.json', ''), gainers, losers }, null, 2),
+  );
+  console.log(`Wrote weekly movers (comparing against ${comparisonFile}).`);
+}
+
 async function main() {
   try {
     console.log('Starting player fetch.');
@@ -97,6 +197,10 @@ async function main() {
     await fs.writeFile(currentFile, JSON.stringify(players, null, 2));
     await fs.writeFile(timestampFile, JSON.stringify({ updated: Date.now() }, null, 2));
     console.log(`Wrote ${players.length} players to ${currentFile}`);
+
+    const historyDir = path.join(dataDir, 'history');
+    await recordHistorySnapshot(historyDir, toSnapshot(players));
+    await writeWeeklyMovers(dataDir, historyDir);
   } catch (error) {
     console.error('Fatal error in main:', error);
     process.exitCode = 1;

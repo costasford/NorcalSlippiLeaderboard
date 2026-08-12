@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime'; // import plugin
 import { Table } from '../../Table';
+import { WeeklyMovers, WeeklyMoversData } from '../../WeeklyMovers';
 import { Player } from '../../../lib/player';
 import * as settings from '../../../../settings';
 
@@ -35,16 +36,22 @@ export default function HomePage() {
   const [updatedAt, setUpdatedAt] = useState<dayjs.Dayjs | null>(null);
   const [updateDesc, setUpdateDesc] = useState('');
   const [error, setError] = useState(false);
+  const [weeklyMovers, setWeeklyMovers] = useState<WeeklyMoversData | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const load = async () => {
       try {
         const base = settings.dataBaseUrl;
-        const [playersNew, playersOld, timestamp] = await Promise.all([
+        const [playersNew, playersOld, timestamp, movers] = await Promise.all([
           fetchJson(`${base}/players.json`),
           fetchJson(`${base}/players-previous.json`),
           fetchJson(`${base}/timestamp.json`),
+          fetchJson(`${base}/weekly-movers.json`),
         ]);
+        if (movers?.gainers && movers?.losers) {
+          setWeeklyMovers(movers);
+        }
 
         if (!playersNew) {
           setError(true);
@@ -89,6 +96,16 @@ export default function HomePage() {
     };
   }, [updatedAt]);
 
+  const filteredPlayers = useMemo(() => {
+    if (!players) return players;
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return players;
+    return players.filter(
+      (p) => p.displayName.toLowerCase().includes(term)
+        || p.connectCode.code.toLowerCase().includes(term),
+    );
+  }, [players, searchTerm]);
+
   return (
     <div className="flex flex-col items-center h-screen p-8">
       <h1 className="text-3xl m-4 text-center text-white">
@@ -115,7 +132,19 @@ export default function HomePage() {
           >
             Request a tag be added or removed
           </a>
-          <Table players={players} />
+          {weeklyMovers && <WeeklyMovers data={weeklyMovers} />}
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by tag or name..."
+            className="w-full max-w-xs mb-3 px-3 py-1.5 rounded bg-gray-800 text-gray-100 placeholder-gray-500 border border-gray-600 focus:outline-none focus:border-indigo-400"
+          />
+          {filteredPlayers && filteredPlayers.length === 0 ? (
+            <div className="p-1 text-gray-400">{`No players match "${searchTerm}".`}</div>
+          ) : (
+            <Table players={filteredPlayers || []} />
+          )}
         </>
       )}
       <div className="p-4 text-gray-300 flex flex-col">

@@ -72,10 +72,10 @@ interface HistorySnapshotEntry {
   rating: number;
 }
 
-const HISTORY_RETENTION_DAYS = 35;
-const WEEKLY_MOVERS_TARGET_DAYS = 7;
+export const HISTORY_RETENTION_DAYS = 35;
+export const WEEKLY_MOVERS_TARGET_DAYS = 7;
 
-const toSnapshot = (players: any[]): HistorySnapshotEntry[] => players
+export const toSnapshot = (players: any[]): HistorySnapshotEntry[] => players
   .filter((p) => p?.rankedNetplayProfile)
   .map((p) => ({
     code: p.connectCode.code,
@@ -85,7 +85,7 @@ const toSnapshot = (players: any[]): HistorySnapshotEntry[] => players
 
 // One snapshot per calendar day, kept for HISTORY_RETENTION_DAYS, so we can
 // compare "now" against "about a week ago" for a biggest-movers view.
-async function recordHistorySnapshot(historyDir: string, snapshot: HistorySnapshotEntry[]) {
+export async function recordHistorySnapshot(historyDir: string, snapshot: HistorySnapshotEntry[]) {
   await fs.mkdir(historyDir, { recursive: true });
   const today = new Date().toISOString().slice(0, 10);
   const todayFile = path.join(historyDir, `${today}.json`);
@@ -113,7 +113,7 @@ async function recordHistorySnapshot(historyDir: string, snapshot: HistorySnapsh
 // Compares the latest snapshot against the oldest one that's at least a
 // week old (or the oldest we have, if less than a week of history exists
 // yet) and writes the top gainers/losers for the frontend to show.
-async function writeWeeklyMovers(dataDir: string, historyDir: string) {
+export async function writeWeeklyMovers(dataDir: string, historyDir: string) {
   const files = (await fs.readdir(historyDir))
     .filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
     .sort();
@@ -125,9 +125,14 @@ async function writeWeeklyMovers(dataDir: string, historyDir: string) {
 
   const latestFile = files[files.length - 1];
   const targetTime = Date.now() - WEEKLY_MOVERS_TARGET_DAYS * 24 * 60 * 60 * 1000;
-  const comparisonFile = files.find(
+  // files is sorted oldest -> newest, so among snapshots old enough to
+  // qualify, the LAST one is the one closest to exactly a week ago. Using
+  // the first (oldest) would keep widening the comparison window toward
+  // the full retention period as more history accumulates.
+  const qualifying = files.filter(
     (f) => new Date(`${f.slice(0, 10)}T00:00:00Z`).getTime() <= targetTime,
-  ) || files[0];
+  );
+  const comparisonFile = qualifying.length ? qualifying[qualifying.length - 1] : files[0];
 
   if (comparisonFile === latestFile) {
     console.log('Only one history snapshot exists so far - skipping weekly movers.');
@@ -207,4 +212,8 @@ async function main() {
   }
 }
 
-main();
+// Guarded so requiring this module from tests (to exercise the exported
+// history/weekly-movers helpers) doesn't kick off a real fetch run.
+if (require.main === module) {
+  main();
+}

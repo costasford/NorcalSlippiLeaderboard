@@ -13,10 +13,13 @@ module.exports = {
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
-    '!src/index.tsx'
+    '!src/index.tsx',
+    'cron/**/*.ts'
   ],
   testMatch: [
     '<rootDir>/src/**/__tests__/**/*.(ts|tsx|js)',
-    '<rootDir>/src/**/*.(test|spec).(ts|tsx|js)'
+    '<rootDir>/src/**/*.(test|spec).(ts|tsx|js)',
+    '<rootDir>/cron/**/__tests__/**/*.(ts|tsx|js)',
+    '<rootDir>/cron/**/*.(test|spec).(ts|tsx|js)'
   ]
 };

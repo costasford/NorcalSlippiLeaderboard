@@ -33,9 +33,9 @@ module.exports = (env = {}) => ({
   devServer: {
     port,
     compress: true,
-    contentBase: output,
-    publicPath,
-    stats: { colors: true },
+    static: {
+      directory: output,
+    },
     hot: true,
     historyApiFallback: true,
     open: true,

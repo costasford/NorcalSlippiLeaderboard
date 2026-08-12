@@ -1,0 +1,15 @@
+services:
+  leaderboard-cron:
+    build:
+      context: .
+      dockerfile: cron/Dockerfile
+    restart: unless-stopped
+    volumes:
+      - leaderboard_data:/data
+
+volumes:
+  # Created once on the host with `docker volume create leaderboard_data`,
+  # and mounted read-only into the Caddy container from the FlowCRM compose
+  # project so it can serve these files over HTTPS at /leaderboard/*.
+  leaderboard_data:
+    external: true

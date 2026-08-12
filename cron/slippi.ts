@@ -1,5 +1,12 @@
 import { RateLimiter } from "limiter"
 
+// Slippi's API moved from gql-gateway-dot-slippi.uc.r.appspot.com to
+// internal.slippi.gg at some point after Feb 2023, and the root query
+// field was renamed getConnectCode -> getUser (which now returns the
+// User directly, not nested under a `.user` field). The characters
+// sub-selection also lost its `id` field. Verified against the current
+// schema in August 2026 - see andross-ssbm/slippy-api for an
+// independently-maintained client confirming the same shape.
 export const getPlayerData = async (connectCode: string) => {
   const query = `fragment userProfilePage on User {
     displayName
@@ -17,7 +24,6 @@ export const getPlayerData = async (connectCode: string) => {
             dailyRegionalPlacement
             continent
             characters {
-                    id
                     character
                     gameCount
                     __typename
@@ -27,24 +33,21 @@ export const getPlayerData = async (connectCode: string) => {
       __typename
   }
 
-  query AccountManagementPageQuery($cc: String!) {
-      getConnectCode(code: $cc) {
-            user {
-                    ...userProfilePage
-                    __typename
-                  }
+  query UserProfilePageQuery($cc: String, $uid: String) {
+      getUser(connectCode: $cc, fbUid: $uid) {
+            ...userProfilePage
             __typename
           }
   }`;
 
-  const req = await fetch('https://gql-gateway-dot-slippi.uc.r.appspot.com/graphql', {
+  const req = await fetch('https://internal.slippi.gg/graphql', {
     headers: {
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      operationName: 'AccountManagementPageQuery',
+      operationName: 'UserProfilePageQuery',
       query,
-      variables: { cc: connectCode },
+      variables: { cc: connectCode, uid: connectCode },
     }),
     method: 'POST',
   });

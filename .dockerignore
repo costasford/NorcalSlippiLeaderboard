@@ -1,0 +1,7 @@
+node_modules
+dist
+docs
+storybook-static
+cron/logs
+cron/data
+.git

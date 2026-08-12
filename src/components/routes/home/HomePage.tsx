@@ -105,10 +105,16 @@ export default function HomePage() {
       {players && (
         <>
           <div className="p-1 text-gray-300">
-            {' '}
-            Updated
-            {updateDesc}
+            {`Updated ${updateDesc}`}
           </div>
+          <a
+            href="https://github.com/costasford/NorcalSlippiLeaderboard/issues/new?template=tag-request.yml"
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm text-gray-400 hover:text-indigo-400 hover:underline mb-2"
+          >
+            Request a tag be added or removed
+          </a>
           <Table players={players} />
         </>
       )}

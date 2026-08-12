@@ -1,0 +1,41 @@
+name: Tag Request
+description: Ask for a Slippi connect code to be added to or removed from the leaderboard
+title: "[Tag Request]: "
+labels: ["tag-request"]
+body:
+  - type: dropdown
+    id: action
+    attributes:
+      label: What would you like?
+      options:
+        - Add a tag
+        - Remove a tag
+    validations:
+      required: true
+  - type: input
+    id: connect-code
+    attributes:
+      label: Slippi connect code
+      description: The exact code, e.g. ABCD#123
+      placeholder: ABCD#123
+    validations:
+      required: true
+  - type: input
+    id: display-name
+    attributes:
+      label: Player name (optional)
+      description: Helps confirm this is the right account
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else we should know?
+      description: e.g. "this is me", "this account is inactive", region, etc.
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: This code belongs to a NorCal player (or a player who regularly plays in NorCal events)
+          required: true

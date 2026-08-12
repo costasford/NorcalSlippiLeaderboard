@@ -13,11 +13,11 @@ const mockPlayer: Player = {
     rank: 1,
     characters: [
       { character: 'FOX', gameCount: 8 },
-      { character: 'FALCO', gameCount: 7 }
+      { character: 'FALCO', gameCount: 7 },
     ],
     dailyGlobalPlacement: null,
-    dailyRegionalPlacement: null
-  }
+    dailyRegionalPlacement: null,
+  },
 };
 
 describe('Rank system', () => {
@@ -33,8 +33,8 @@ describe('Rank system', () => {
       rankedNetplayProfile: {
         ...mockPlayer.rankedNetplayProfile,
         wins: 0,
-        losses: 0
-      }
+        losses: 0,
+      },
     };
     const rank = getRank(noGamesPlayer);
     expect(rank.name).toBe('None');

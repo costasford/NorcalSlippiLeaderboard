@@ -28,5 +28,13 @@
     "max-classes-per-file": "off",
     "class-methods-use-this": "off",
     "no-param-reassign": ["error", { "props": false }]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["src/setupTests.ts"],
+      "rules": {
+        "import/no-extraneous-dependencies": ["error", { "devDependencies": true }]
+      }
+    }
+  ]
 }

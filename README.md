@@ -2,108 +2,84 @@
 
 Code powering https://costasford.github.io/NorcalSlippiLeaderboard/#/
 
-## Technologies
+A live leaderboard of NorCal Melee players' Slippi ranked stats, sorted by rating.
 
-- Typescript
-- [Webpack@5](https://webpack.js.org/) as module bundler
-- [Eslint](http://eslint.org/) for linting
-- [Tailwind](https://tailwindcss.com/) for css
-
-
-Fork of [reacts-pages-boilerplate](https://github.com/rtivital/react-pages-boilerplate)
+Fork of [Grantismo/CoSlippiLeaderboard](https://github.com/Grantismo/CoSlippiLeaderboard), itself built on [react-pages-boilerplate](https://github.com/rtivital/react-pages-boilerplate).
 
 ## How it works
 
-The leaderboard is built from two programs:
-* [[src/](https://github.com/Grantismo/CoSlippiLeaderboard/tree/master/src)] A static react website which displays player data 
-* [[cron/](https://github.com/Grantismo/CoSlippiLeaderboard/tree/master/cron)] A cron job which pulls connect codes from a google sheet, player data from slippi, and writes that data to json files in `cron/data/`, and then redeploys the static site.
+Two independent pieces:
 
-## Caveats
+- **[`src/`](./src)** — a static React site, deployed to GitHub Pages. It fetches the current leaderboard data at *runtime* rather than having it baked into the build, so the site only needs redeploying when the code actually changes.
+- **[`cron/`](./cron)** — a small containerized job that fetches every player's current stats from Slippi's API, sorts them, and writes the result as JSON. It runs on a small always-on VPS via Docker Compose, on a loop (currently every 8 minutes — a nod to Melee's standard stock timer), and doesn't touch git or rebuild the site at all.
 
-* The undocumented slippi api this depends on may break at any time
-* This project takes extra consideration to avoid slamming the slippi servers with api calls, please be considerate of this.
-* Logic for determining ranks may become out of sync with the official slippi rank logic
-* I would appreciate if you keep my 'by me a coffee' link and give me credit for building this in your leaderboard.
+A reverse proxy (Caddy) on that same VPS serves the JSON over HTTPS, and `settings.js`'s `dataBaseUrl` tells the frontend where to fetch it from.
 
-## Getting started
+This is a meaningfully different architecture than the original fork: the old version had the cron job git-commit its output and trigger a full site rebuild + redeploy on every run, from a personal machine. That's fragile (one uncommitted change on that machine and deploys silently stop) and heavy (a full site rebuild every few minutes forever). Splitting "data" from "site" means the data updates independently and the site only needs touching for real changes.
 
-- Easiest to get working on a unix system (linux/mac). On windows you can use WSL to install ubuntu. https://learn.microsoft.com/en-us/windows/wsl/install
-- Clone this repository: `git clone https://github.com/Grantismo/CoSlippiLeaderboard.git` 
-- (Optional) Install NVM -- instructions [here](https://github.com/creationix/nvm)
-- (Optional) Run `nvm use 18.12.0`. This will ensure that you are running the supported version of Node.js.
-- Install yarn `npm install --global yarn`
-- Install dependencies: `yarn` (from your code directory).
-- (Optional) Install the github cli tool -- instructions here https://github.com/cli/cli#installation
-- (Optional) Run `gh auth login`
-- Set your repoPath in settings.js and  "homepage" in package.json to your github pages url (e.g. https://grantismo.github.io/CoSlippiLeaderboard/)
+## Tech stack
 
-### If you want to collect connect codes from a google form
-- Create a google form to collect player tags from your region. ![image](https://user-images.githubusercontent.com/911232/207989907-256100e3-c215-4699-9ae7-655d5345cbd4.png)
-- Link your google form to a google sheet ![image](https://user-images.githubusercontent.com/911232/207990065-aadc0a30-2561-46b7-a46e-0742af601cec.png)
-- Follow directions in https://theoephraim.github.io/node-google-spreadsheet/#/getting-started/authentication?id=service-account to create a service account and credentials to read from the google sheet. Save your creds json file to `secrets/creds.json`
-- Change `spreadsheetID` in settings.js to your google sheet ID
+- TypeScript
+- [Webpack 5](https://webpack.js.org/) as the module bundler
+- [ESLint](https://eslint.org/) for linting
+- [Tailwind](https://tailwindcss.com/) for CSS
+- Docker Compose for the cron job
 
-### If you want to manually populate your list of connect codes:
-- Modify `getPlayerConnectCodes` to supply the list directly (see https://github.com/costasford/NorcalSlippiLeaderboard/blob/master/cron/fetchStats.ts#L11-L13)
-- Delete `import { GoogleSpreadsheet } from 'google-spreadsheet';` and `import creds from '../secrets/creds.json';` from `cron/fetchStats.ts`
+## Requesting a tag be added or removed
 
-### Test your cronjob
-- Create dummy initial data 
+Click **"Request a tag be added or removed"** on the site itself, or [open a Tag Request issue](https://github.com/costasford/NorcalSlippiLeaderboard/issues/new?template=tag-request.yml) directly. Requests are reviewed manually and, if approved, added to `cron/players.json`.
+
+## Local development
+
+```bash
+npm install
+npm start          # dev server at http://localhost:8262
+npm run build       # production build to dist/
+npm run deploy      # build + deploy to GitHub Pages
+npm run lint
+npm test
 ```
-mkdir cron/data
-echo '[]' >> cron/data/players-new.json
-mkdir cron/logs
-touch cron/logs/log.txt
+
+To point your local dev build at a different data source (e.g. while testing), edit `dataBaseUrl` in [`settings.js`](./settings.js).
+
+## Running the data-fetch cron job
+
+The player list lives in [`cron/players.json`](./cron/players.json) — a flat array of Slippi connect codes (`connectCodes`). To add or remove players directly (rather than going through a tag request), edit that file.
+
+### Run it once, locally
+
+```bash
+npm install
+DATA_DIR=./cron/data node -r ts-node/register cron/fetchStats.ts
 ```
-- Run the job `./cron/run.sh`
-- A successful job should look like this: 
 
-![image](https://user-images.githubusercontent.com/911232/209762179-e3da2be2-48d4-4c2a-a40c-c5fb3f78a8e9.png)
+This fetches every code in `cron/players.json` from Slippi's API (rate-limited to 1 request/second — please don't remove that, Slippi's API is undocumented and unofficial, and hammering it risks it getting locked down for everyone) and writes `players.json`, `players-previous.json`, and `timestamp.json` to `DATA_DIR`.
 
-- A log file should be written at cron/logs/log.txt. You can watch the output as the cron runs with `tail -f cron/logs/log.txt`
+### Run it continuously (how the live site does it)
 
-### Test the web app
-- Run `npm start` and open http://localhost:8262/ in your browse.
-
-### Final steps
-- Commit any remaining changes 
-- `git add .`
-- `git commit -m "Describe your commit here"`
--  Edit your crontab to run the cronjob on a reoccuring basis (every hour for example).On linux `crontab -e`:
-
+```bash
+docker volume create leaderboard_data
+docker compose up -d --build
 ```
-# m h  dom mon dow   command
-0 * * * * /full/path/to/your/code/CoSlippiLeaderboard/cron/run.sh
-```
-- You can look in cron/logs/log.txt to see the output of the latest cron run.
-- That's it!
-- DM me on discord if you run into problems. blorppppp#2398
 
-### Common issues:
-- The cron server isn't started. `sudo service cron status`
-  - On Windows WSL: https://www.howtogeek.com/746532/how-to-launch-cron-automatically-in-wsl-on-windows-10-and-11/
-- `/bin/sh: 1: npm: not found`, npm is not in the path when running the cron job.
-  - Add your PATH manually to `cron/run.sh`. See https://stackoverflow.com/a/14612507
-- Your deployed site looks like this README. Your github pages configuration needs updating.
-  - Correct github page settings should look like this:
-  ![image](https://user-images.githubusercontent.com/911232/210273059-7a47d009-71d0-4dec-aea2-b93e115c86fd.png)
-
+This builds `cron/Dockerfile` and runs `cron/loop.sh`, which fetches on a loop and writes to the `leaderboard_data` Docker volume. Whatever serves your frontend needs to expose that volume's `players.json` / `players-previous.json` / `timestamp.json` over HTTP (with CORS allowing your frontend's origin) at the URL configured in `settings.js`'s `dataBaseUrl` — the live deployment does this by mounting the same volume read-only into a Caddy container and adding a `handle_path` route for it.
 
 ## Settings
 
-[settings.js](./settings.js) file includes all important settings that should be used to setup deployments to gh-pages:
+[`settings.js`](./settings.js):
 
-- **title** – Base application title
-- **cname** – Adds CNAME file that allows to use custom domain names with gh-pages
-- **repoPath** – username.github.io/repoPath for react router to recognize gh-pages paths
-- **spreadsheetID** - ID for google sheet containing player connect codes. `https://docs.google.com/spreadsheets/d/[YOUR ID]`
+- **title** — base application title
+- **cname** — adds a CNAME file for a custom domain with gh-pages (leave `null` for a plain `username.github.io/repo` deployment)
+- **repoPath** — `username.github.io/repoPath`, so React Router recognizes gh-pages paths
+- **dataBaseUrl** — base URL the frontend fetches leaderboard JSON from at runtime (see above)
 
-## scripts
+## Caveats
 
-- `npm start` – starts development server with webpack-dev-server
-- `npm run build` – builds project to production
-- `npm run deploy` – builds and deploys project to Github pages
-- `./cron/run.sh` - manually runs the cron job
+- The Slippi API this depends on is undocumented and unofficial, and has changed shape before without notice. If the leaderboard suddenly stops updating, that's the first thing to check.
+- Please keep the 1 request/second rate limit in `cron/slippi.ts` — this project only works because Slippi tolerates polite polling.
+- Rank-tier logic may drift out of sync with Slippi's own official thresholds over time.
+- If you fork this, I'd appreciate you keeping the "buy me a coffee" credit for the original author below.
 
-## Support me
+## Support the original author
+
 ☕ [buy me a coffee](https://www.buymeacoffee.com/blorppppp)

@@ -5,6 +5,6 @@
 # runtime.
 while true; do
   echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) Running fetchStats..."
-  node --loader ts-node/esm --no-warnings cron/fetchStats.ts
+  node -r ts-node/register cron/fetchStats.ts
   sleep 300
 done

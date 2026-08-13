@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime'; // import plugin
 import { Table } from '../../Table';
 import { WeeklyMovers, WeeklyMoversData } from '../../WeeklyMovers';
+import { ErrorBoundary } from '../../ErrorBoundary';
 import { Player } from '../../../lib/player';
 import * as settings from '../../../../settings';
 
@@ -132,7 +133,11 @@ export default function HomePage() {
           >
             Request a tag be added or removed
           </a>
-          {weeklyMovers && <WeeklyMovers data={weeklyMovers} />}
+          {weeklyMovers && (
+            <ErrorBoundary fallbackMessage="Couldn't show this week's movers - try refreshing.">
+              <WeeklyMovers data={weeklyMovers} />
+            </ErrorBoundary>
+          )}
           <label htmlFor="player-search" className="w-full max-w-xs">
             <span className="sr-only">Search by tag or name</span>
             <input
@@ -147,7 +152,9 @@ export default function HomePage() {
           {filteredPlayers && filteredPlayers.length === 0 ? (
             <div className="p-1 text-gray-400">{`No players match "${searchTerm}".`}</div>
           ) : (
-            <Table players={filteredPlayers || []} />
+            <ErrorBoundary fallbackMessage="Something went wrong showing the leaderboard table. This usually means Slippi changed their API again - try refreshing, or check back later.">
+              <Table players={filteredPlayers || []} />
+            </ErrorBoundary>
           )}
         </>
       )}

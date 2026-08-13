@@ -4,10 +4,15 @@ import {
 import HomePage from '../HomePage';
 import { Player } from '../../../../lib/player';
 
+let mockTableShouldThrow = false;
+
 jest.mock('../../../Table', () => ({
-  Table: ({ players }: { players: Player[] }) => (
-    <div data-testid="table">{players.map((p) => p.displayName).join(',')}</div>
-  ),
+  Table: ({ players }: { players: Player[] }) => {
+    if (mockTableShouldThrow) {
+      throw new Error('Table crashed');
+    }
+    return <div data-testid="table">{players.map((p) => p.displayName).join(',')}</div>;
+  },
 }));
 
 jest.mock('../../../../../settings', () => ({
@@ -89,9 +94,30 @@ describe('HomePage', () => {
     mockFetchResponses();
   });
 
+  afterEach(() => {
+    mockTableShouldThrow = false;
+  });
+
   it('shows a loading state before data arrives', () => {
     render(<HomePage />);
     expect(screen.getByText('Loading leaderboard...')).toBeInTheDocument();
+  });
+
+  it('keeps the header, updated time, and search box visible when the table crashes', async () => {
+    mockTableShouldThrow = true;
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    await renderAndWaitForLoad();
+
+    expect(screen.getByText('Test Leaderboard')).toBeInTheDocument();
+    expect(screen.getByText(/^Updated /)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Search by tag or name...')).toBeInTheDocument();
+    expect(screen.getByText(
+      /Something went wrong showing the leaderboard table/,
+    )).toBeInTheDocument();
+    expect(screen.queryByTestId('table')).not.toBeInTheDocument();
+
+    consoleSpy.mockRestore();
   });
 
   it('renders the player list and update time after loading', async () => {

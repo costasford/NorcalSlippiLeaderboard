@@ -1,3 +1,4 @@
+const fs = require('fs');
 const path = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
@@ -11,6 +12,29 @@ const entry = path.join(__dirname, './src/index.tsx');
 const port = 8262;
 const output = path.join(__dirname, './dist');
 const publicPath = mode === 'production' ? settings.repoPath || '/' : '/';
+const ogImageUrl = settings.repoPath ? `${settings.repoPath}og-image.png` : null;
+
+// Emits a static file into the output directory unchanged, without
+// pulling in copy-webpack-plugin for the one asset (the Open Graph
+// preview image) that needs a stable URL outside of webpack's normal
+// content-hashed asset pipeline.
+class CopyStaticFilePlugin {
+  constructor(from, to) {
+    this.from = from;
+    this.to = to;
+  }
+
+  apply(compiler) {
+    compiler.hooks.thisCompilation.tap('CopyStaticFilePlugin', (compilation) => {
+      compilation.hooks.processAssets.tap(
+        { name: 'CopyStaticFilePlugin', stage: webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL },
+        () => {
+          compilation.emitAsset(this.to, new webpack.sources.RawSource(fs.readFileSync(this.from)));
+        },
+      );
+    });
+  }
+}
 
 module.exports = (env = {}) => ({
 
@@ -116,9 +140,14 @@ module.exports = (env = {}) => ({
             <meta property="og:title" content="${settings.title}">
             <meta property="og:description" content="${settings.description}">
             ${settings.repoPath ? `<meta property="og:url" content="${settings.repoPath}">` : ''}
-            <meta name="twitter:card" content="summary">
+            ${ogImageUrl ? `
+            <meta property="og:image" content="${ogImageUrl}">
+            <meta property="og:image:width" content="1200">
+            <meta property="og:image:height" content="630">` : ''}
+            <meta name="twitter:card" content="${ogImageUrl ? 'summary_large_image' : 'summary'}">
             <meta name="twitter:title" content="${settings.title}">
             <meta name="twitter:description" content="${settings.description}">
+            ${ogImageUrl ? `<meta name="twitter:image" content="${ogImageUrl}">` : ''}
           </head>
           <body class="bg-gray-600">
             <noscript>
@@ -131,6 +160,7 @@ module.exports = (env = {}) => ({
         </html>
       `,
     }),
+    new CopyStaticFilePlugin(path.join(__dirname, './images/og-image.png'), 'og-image.png'),
     ...(mode !== 'production'
       ? [new webpack.HotModuleReplacementPlugin()]
       : [...(settings.cname ? [new CnameWebpackPlugin({ domain: settings.cname })] : [])]),

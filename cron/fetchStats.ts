@@ -174,7 +174,7 @@ export async function writeWeeklyMovers(dataDir: string, historyDir: string) {
   console.log(`Wrote weekly movers (comparing against ${comparisonFile}).`);
 }
 
-async function main() {
+export async function main() {
   try {
     console.log('Starting player fetch.');
     const players = await getPlayers();

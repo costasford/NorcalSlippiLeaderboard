@@ -7,8 +7,10 @@ module.exports = {
   // cname: 'omatsuri.app'
   cname: null,
 
-  // add repo path for username.github.io/repoPath for react router to recognize paths,
-  // use only when deployed to github.io, leave as null for deployments with custom domains
+  // Full URL used as webpack's output.publicPath so built asset URLs
+  // resolve correctly at username.github.io/repoPath. Not used for
+  // react-router (HashRouter needs no basename here - see App.tsx).
+  // Leave as null for deployments with custom domains.
   repoPath: 'https://costasford.github.io/NorcalSlippiLeaderboard/',
 
   // Google sheets ID for player connect codes.

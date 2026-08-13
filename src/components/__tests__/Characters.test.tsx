@@ -9,7 +9,7 @@ jest.mock('../Character', () => ({
   ),
 }));
 
-jest.mock('react-responsive', () => ({
+jest.mock('../../lib/useMediaQuery', () => ({
   useMediaQuery: jest.fn(() => true),
 }));
 

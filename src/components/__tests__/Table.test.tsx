@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { useMediaQuery } from 'react-responsive';
+import { useMediaQuery } from '../../lib/useMediaQuery';
 import { Table } from '../Table';
 import { Player } from '../../lib/player';
 
@@ -8,7 +8,7 @@ jest.mock('../Row', () => ({
   Row: ({ player }: { player: Player }) => <tr><td>{player.displayName}</td></tr>,
 }));
 
-jest.mock('react-responsive', () => ({
+jest.mock('../../lib/useMediaQuery', () => ({
   useMediaQuery: jest.fn(() => true),
 }));
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useMediaQuery } from 'react-responsive';
+import { useMediaQuery } from '../lib/useMediaQuery';
 import { Row } from './Row';
 import { Player } from '../lib/player';
 
@@ -8,7 +8,7 @@ interface Props {
 }
 
 export function Table({ players }: Props) {
-  const isSm = useMediaQuery({ query: '(min-width: 640px)' });
+  const isSm = useMediaQuery('(min-width: 640px)');
 
   const th = (text: string) => <th className="text-xs md:text-sm font-medium text-white md:px-6 md:py-4 px-3 py-3">{text}</th>;
   return (

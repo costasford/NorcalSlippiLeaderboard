@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useMediaQuery } from 'react-responsive';
+import { useMediaQuery } from '../lib/useMediaQuery';
 import { Player } from '../lib/player';
 import { Character } from './Character';
 
@@ -11,7 +11,7 @@ interface Props {
 const CONDENSED_SIZE = 3;
 
 export function Characters({ player, totalGames }: Props) {
-  const isSm = useMediaQuery({ query: '(min-width: 640px)' });
+  const isSm = useMediaQuery('(min-width: 640px)');
 
   const [expand, setExpand] = useState(false);
 

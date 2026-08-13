@@ -1,5 +1,3 @@
-import React from 'react';
-
 import { CircularProgressbarWithChildren, buildStyles } from 'react-circular-progressbar';
 import { Tooltip } from 'react-tooltip';
 import { CharacterStats } from '../lib/player';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { useMediaQuery } from '../../lib/useMediaQuery';
 import { Table } from '../Table';

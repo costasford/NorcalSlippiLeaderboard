@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useMediaQuery } from '../lib/useMediaQuery';
 import { Player } from '../lib/player';
 import { Character } from './Character';

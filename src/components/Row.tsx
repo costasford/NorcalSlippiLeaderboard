@@ -1,4 +1,3 @@
-import React from 'react';
 import { Player } from '../lib/player';
 import { getRank } from '../lib/ranks';
 import { Characters } from './Characters';
@@ -27,7 +26,10 @@ export function Row({ player }: Props) {
   const changePlusMinus = (change: number) => changeIndicator(change, ['+', '-']);
 
   const getRankChange = (playerData: Player) => {
-    if (!playerData.oldRankedNetplayProfile || !playerData.oldRankedNetplayProfile.rank) {
+    if (
+      !playerData.oldRankedNetplayProfile?.rank
+      || !playerData.rankedNetplayProfile.rank
+    ) {
       return null;
     }
     return playerData.oldRankedNetplayProfile.rank - playerData.rankedNetplayProfile.rank;
@@ -54,7 +56,7 @@ export function Row({ player }: Props) {
     <tr className={`${playerRank.bgClass} border-separate border-spacing-2 border-b-2 border-gray-600`}>
       <td className="md:text-2xl text-gray-300 md:px-6 md:py-4 md:p-1 whitespace-nowrap">
         <div>{isActive && `#${player.rankedNetplayProfile.rank}`}</div>
-        {Boolean(rankChange) && changeArrow(rankChange)}
+        {rankChange ? changeArrow(rankChange) : null}
         {' '}
 
       </td>
@@ -74,7 +76,7 @@ export function Row({ player }: Props) {
         </div>
         <div className="text-gray-300 md:text-sm text-xs">
           {isActive && Math.floor(player.rankedNetplayProfile.ratingOrdinal)}
-          {isActive && Boolean(ratingChange) && changePlusMinus(ratingChange)}
+          {isActive && (ratingChange ? changePlusMinus(ratingChange) : null)}
         </div>
       </td>
       <td className="md:text-sm text-xs text-gray-300 md:px-6 md:py-4 py-1  md:max-w-[18rem] max-w-[3rem]">

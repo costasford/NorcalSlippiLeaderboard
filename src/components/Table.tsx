@@ -1,4 +1,3 @@
-import React from 'react';
 import { useMediaQuery } from '../lib/useMediaQuery';
 import { Row } from './Row';
 import { Player } from '../lib/player';

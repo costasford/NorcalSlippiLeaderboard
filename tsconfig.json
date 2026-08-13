@@ -6,6 +6,7 @@
 
   "compilerOptions": {
     "jsx": "react-jsx",
+    "allowJs": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "module": "commonjs",
@@ -20,21 +21,11 @@
     "downlevelIteration": true,
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
-    
-    // Strict type checking options (gradually enable)
-    "strict": false,
-    "noImplicitAny": false,
-    "strictNullChecks": false,
-    "strictFunctionTypes": false,
-    "strictBindCallApply": false,
-    "strictPropertyInitialization": false,
-    "noImplicitThis": false,
-    "alwaysStrict": true,
-    
-    // Additional checks (gradually enable)
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noImplicitReturns": false,
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
   }
 }

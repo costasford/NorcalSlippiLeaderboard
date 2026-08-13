@@ -1,5 +1,7 @@
 # Norcal Ranked Slippi Leaderboard
 
+[![CI](https://github.com/costasford/NorcalSlippiLeaderboard/actions/workflows/ci.yml/badge.svg)](https://github.com/costasford/NorcalSlippiLeaderboard/actions/workflows/ci.yml)
+
 Code powering https://costasford.github.io/NorcalSlippiLeaderboard/#/
 
 A live leaderboard of NorCal Melee players' Slippi ranked stats, sorted by rating.
@@ -37,6 +39,7 @@ npm start          # dev server at http://localhost:8262
 npm run build       # production build to dist/
 npm run deploy      # build + deploy to GitHub Pages
 npm run lint
+npm run typecheck
 npm test
 ```
 
@@ -70,7 +73,7 @@ This builds `cron/Dockerfile` and runs `cron/loop.sh`, which fetches on a loop a
 
 - **title** — base application title
 - **cname** — adds a CNAME file for a custom domain with gh-pages (leave `null` for a plain `username.github.io/repo` deployment)
-- **repoPath** — `username.github.io/repoPath`, so React Router recognizes gh-pages paths
+- **repoPath** — full URL used as webpack's asset base path for `username.github.io/repoPath` deployments (not used by React Router - see [`App.tsx`](./src/components/App.tsx))
 - **dataBaseUrl** — base URL the frontend fetches leaderboard JSON from at runtime (see above)
 
 ## Caveats

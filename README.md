@@ -10,10 +10,11 @@ Fork of [Grantismo/CoSlippiLeaderboard](https://github.com/Grantismo/CoSlippiLea
 
 ## How it works
 
-Two independent pieces:
+Three independent pieces:
 
 - **[`src/`](./src)** — a static React site, deployed to GitHub Pages. It fetches the current leaderboard data at *runtime* rather than having it baked into the build, so the site only needs redeploying when the code actually changes.
 - **[`cron/`](./cron)** — a small containerized job that fetches every player's current stats from Slippi's API, sorts them, and writes the result as JSON. It runs on a small always-on VPS via Docker Compose, on a loop (currently every 8 minutes — a nod to Melee's standard stock timer), and doesn't touch git or rebuild the site at all.
+- **[`tag-request-api/`](./tag-request-api)** — a tiny containerized HTTP service on the same VPS that receives tag add/remove requests from the site's form and forwards them to a private Discord channel, so requesting a tag doesn't require a GitHub account.
 
 A reverse proxy (Caddy) on that same VPS serves the JSON over HTTPS, and `settings.js`'s `dataBaseUrl` tells the frontend where to fetch it from.
 
@@ -29,7 +30,7 @@ This is a meaningfully different architecture than the original fork: the old ve
 
 ## Requesting a tag be added or removed
 
-Click **"Request a tag be added or removed"** on the site itself, or [open a Tag Request issue](https://github.com/costasford/NorcalSlippiLeaderboard/issues/new?template=tag-request.yml) directly. Requests are reviewed manually and, if approved, added to `cron/players.json`.
+Click **"Request a tag be added or removed"** on the site itself — it expands into a small form (no GitHub account needed) that posts straight to a private Discord channel via [`tag-request-api/`](./tag-request-api). A [GitHub Issue](https://github.com/costasford/NorcalSlippiLeaderboard/issues/new?template=tag-request.yml) link is still offered alongside it for people who'd rather use that. Either way, requests are reviewed manually and, if approved, added to `cron/players.json`.
 
 ## Local development
 
@@ -67,6 +68,17 @@ docker compose up -d --build
 
 This builds `cron/Dockerfile` and runs `cron/loop.sh`, which fetches on a loop and writes to the `leaderboard_data` Docker volume. Whatever serves your frontend needs to expose that volume's `players.json` / `players-previous.json` / `timestamp.json` over HTTP (with CORS allowing your frontend's origin) at the URL configured in `settings.js`'s `dataBaseUrl` — the live deployment does this by mounting the same volume read-only into a Caddy container and adding a `handle_path` route for it.
 
+## Running the tag-request API
+
+[`tag-request-api/`](./tag-request-api) is a small dependency-free Node HTTP service (see [`server.js`](./tag-request-api/server.js)) that validates incoming tag requests (connect code format, field length, per-IP rate limiting) and forwards well-formed ones to a Discord channel via a webhook.
+
+```bash
+cp .env.example .env   # fill in DISCORD_WEBHOOK_URL - see the comment in that file
+docker compose up -d --build tag-request-api
+```
+
+In production this container joins the same Docker network as the FlowCRM project's Caddy instance (see `docker-compose.yml`'s `flowcrm_default` external network) so Caddy can `reverse_proxy` `/tag-request` to it by container name - adjust that if you're deploying somewhere else.
+
 ## Settings
 
 [`settings.js`](./settings.js):
@@ -76,6 +88,7 @@ This builds `cron/Dockerfile` and runs `cron/loop.sh`, which fetches on a loop a
 - **cname** — adds a CNAME file for a custom domain with gh-pages (leave `null` for a plain `username.github.io/repo` deployment)
 - **repoPath** — full URL used as webpack's asset base path for `username.github.io/repoPath` deployments (not used by React Router - see [`App.tsx`](./src/components/App.tsx))
 - **dataBaseUrl** — base URL the frontend fetches leaderboard JSON from at runtime (see above)
+- **tagRequestUrl** — URL the tag request form POSTs to (see [`tag-request-api/`](./tag-request-api))
 
 ## Caveats
 

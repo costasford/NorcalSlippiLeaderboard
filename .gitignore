@@ -14,3 +14,4 @@ coverage
 secrets/*
 cron/data/*
 cron/logs/*
+.env

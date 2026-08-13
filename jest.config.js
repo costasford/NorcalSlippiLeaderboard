@@ -14,12 +14,15 @@ module.exports = {
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
     '!src/index.tsx',
-    'cron/**/*.ts'
+    'cron/**/*.ts',
+    'tag-request-api/**/*.js'
   ],
   testMatch: [
     '<rootDir>/src/**/__tests__/**/*.(ts|tsx|js)',
     '<rootDir>/src/**/*.(test|spec).(ts|tsx|js)',
     '<rootDir>/cron/**/__tests__/**/*.(ts|tsx|js)',
-    '<rootDir>/cron/**/*.(test|spec).(ts|tsx|js)'
+    '<rootDir>/cron/**/*.(test|spec).(ts|tsx|js)',
+    '<rootDir>/tag-request-api/**/__tests__/**/*.js',
+    '<rootDir>/tag-request-api/**/*.(test|spec).js'
   ]
 };

@@ -4,6 +4,7 @@ import relativeTime from 'dayjs/plugin/relativeTime'; // import plugin
 import { Table } from '../../Table';
 import { WeeklyMovers, WeeklyMoversData } from '../../WeeklyMovers';
 import { ErrorBoundary } from '../../ErrorBoundary';
+import { TagRequestForm } from '../../TagRequestForm';
 import { Player } from '../../../lib/player';
 import * as settings from '../../../../settings';
 
@@ -125,14 +126,7 @@ export default function HomePage() {
           <div className="p-1 text-gray-300">
             {`Updated ${updateDesc}`}
           </div>
-          <a
-            href="https://github.com/costasford/NorcalSlippiLeaderboard/issues/new?template=tag-request.yml"
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm text-gray-400 hover:text-indigo-400 hover:underline mb-2"
-          >
-            Request a tag be added or removed
-          </a>
+          <TagRequestForm />
           {weeklyMovers && (
             <ErrorBoundary fallbackMessage="Couldn't show this week's movers - try refreshing.">
               <WeeklyMovers data={weeklyMovers} />

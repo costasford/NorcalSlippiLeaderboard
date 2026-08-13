@@ -7,9 +7,27 @@ services:
     volumes:
       - leaderboard_data:/data
 
+  tag-request-api:
+    build:
+      context: .
+      dockerfile: tag-request-api/Dockerfile
+    restart: unless-stopped
+    environment:
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - ALLOWED_ORIGIN=https://costasford.github.io
+    networks:
+      - default
+      # So Caddy (running in the FlowCRM compose project) can reverse_proxy
+      # to this service by name. See FlowCRM's Caddyfile.
+      - flowcrm_default
+
 volumes:
   # Created once on the host with `docker volume create leaderboard_data`,
   # and mounted read-only into the Caddy container from the FlowCRM compose
   # project so it can serve these files over HTTPS at /leaderboard/*.
   leaderboard_data:
+    external: true
+
+networks:
+  flowcrm_default:
     external: true

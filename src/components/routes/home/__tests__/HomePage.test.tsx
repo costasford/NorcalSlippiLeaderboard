@@ -105,7 +105,7 @@ describe('HomePage', () => {
   it('shows the weekly movers panel when data is available', async () => {
     await renderAndWaitForLoad();
     expect(screen.getByText('Biggest gainers this week')).toBeInTheDocument();
-    expect(screen.getByText('Biggest losers this week')).toBeInTheDocument();
+    expect(screen.getByText('Biggest fallers this week')).toBeInTheDocument();
   });
 
   it('hides the weekly movers panel when no weekly-movers data exists yet', async () => {

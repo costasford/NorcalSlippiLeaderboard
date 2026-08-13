@@ -10,7 +10,7 @@ interface PlayerConfig {
   description: string;
 }
 
-const getPlayerConnectCodes = async (): Promise<string[]> => {
+export const getPlayerConnectCodes = async (): Promise<string[]> => {
   try {
     const configPath = path.join(__dirname, 'players.json');
     const configData = await fs.readFile(configPath, 'utf-8');
@@ -33,7 +33,7 @@ const getPlayerConnectCodes = async (): Promise<string[]> => {
   }
 };
 
-const getPlayers = async () => {
+export const getPlayers = async () => {
   try {
     const codes = await getPlayerConnectCodes();
     if (codes.length === 0) {

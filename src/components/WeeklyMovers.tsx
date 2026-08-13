@@ -59,7 +59,7 @@ export function WeeklyMovers({ data }: Props) {
         <MoverList movers={data.gainers} positive />
       </div>
       <div className="bg-gray-800 bg-opacity-50 rounded p-3">
-        <div className="text-xs uppercase text-gray-400 mb-1">Biggest losers this week</div>
+        <div className="text-xs uppercase text-gray-400 mb-1">Biggest fallers this week</div>
         <MoverList movers={data.losers} positive={false} />
       </div>
     </div>

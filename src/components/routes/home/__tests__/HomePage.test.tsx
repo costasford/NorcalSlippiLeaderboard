@@ -72,6 +72,14 @@ const mockFetchResponses = (overrides: Record<string, unknown> = {}) => {
 // "Updated ..." is the last state update in the successful load path, so
 // waiting for it (rather than an earlier one, like the table appearing)
 // lets every queued state update settle before assertions run.
+//
+// This component still logs a handful of "not wrapped in act(...)"
+// warnings during this suite (harmless - all assertions pass). It comes
+// from load()'s setState calls firing after a native-fetch promise chain
+// resolves outside of any React-tracked act() scope; several explicit
+// flush/act-wrapping strategies were tried and none changed it, so it's
+// left as known noise rather than working around it further. See PR/commit
+// history for what was tried.
 const renderAndWaitForLoad = async () => {
   render(<HomePage />);
   await waitFor(() => expect(screen.getByText(/^Updated /)).toBeInTheDocument());

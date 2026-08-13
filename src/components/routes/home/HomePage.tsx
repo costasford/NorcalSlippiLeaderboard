@@ -133,13 +133,17 @@ export default function HomePage() {
             Request a tag be added or removed
           </a>
           {weeklyMovers && <WeeklyMovers data={weeklyMovers} />}
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by tag or name..."
-            className="w-full max-w-xs mb-3 px-3 py-1.5 rounded bg-gray-800 text-gray-100 placeholder-gray-500 border border-gray-600 focus:outline-none focus:border-indigo-400"
-          />
+          <label htmlFor="player-search" className="w-full max-w-xs">
+            <span className="sr-only">Search by tag or name</span>
+            <input
+              id="player-search"
+              type="search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by tag or name..."
+              className="w-full mb-3 px-3 py-1.5 rounded bg-gray-800 text-gray-100 placeholder-gray-500 border border-gray-600 focus:outline-none focus:border-indigo-400"
+            />
+          </label>
           {filteredPlayers && filteredPlayers.length === 0 ? (
             <div className="p-1 text-gray-400">{`No players match "${searchTerm}".`}</div>
           ) : (

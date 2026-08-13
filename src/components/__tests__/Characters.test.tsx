@@ -70,9 +70,20 @@ describe('Characters', () => {
     expect(screen.getAllByTestId('character')).toHaveLength(3);
   });
 
-  it('expands via the Enter key for keyboard accessibility', () => {
+  it('uses a real <button> element for the toggle, not a hand-rolled div/role pattern', () => {
+    // A real <button> gets correct Enter/Space keyboard activation for
+    // free from the browser - no custom onKeyDown handler needed or
+    // meaningfully testable through jsdom's fireEvent, which doesn't
+    // simulate the browser's native "Enter/Space triggers click" behavior.
     render(<Characters player={makePlayer(characterList(6))} totalGames={21} />);
-    fireEvent.keyDown(screen.getByRole('button'), { key: 'Enter' });
-    expect(screen.getAllByTestId('character')).toHaveLength(6);
+    expect(screen.getByRole('button').tagName).toBe('BUTTON');
+  });
+
+  it('gives the expand/collapse toggle an accessible name describing what it does', () => {
+    render(<Characters player={makePlayer(characterList(6))} totalGames={21} />);
+    expect(screen.getByRole('button', { name: 'Show all 6 characters' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button'));
+    expect(screen.getByRole('button', { name: 'Show fewer characters' })).toBeInTheDocument();
   });
 });

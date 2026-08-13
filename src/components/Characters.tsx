@@ -43,12 +43,11 @@ export function Characters({ player, totalGames }: Props) {
       ))}
       {characters.length > CONDENSED_SIZE
     && (
-    <div
+    <button
+      type="button"
+      aria-label={`Show all ${characters.length} characters`}
       className="md:mx-1 mx-0.5 p-1 rounded-full border-gray-300 md:border-2 border border-dashed md:h-12 md:w-12 h-4 w-4 text-xs flex flex-col items-center justify-center hover:border-solid hover:text-gray-500 hover:border-gray-500"
       onClick={expandChracters}
-      onKeyDown={(e) => e.key === 'Enter' && expandChracters()}
-      role="button"
-      tabIndex={0}
     >
       {isSm && (
       <>
@@ -60,7 +59,7 @@ export function Characters({ player, totalGames }: Props) {
       </>
       )}
       {!isSm && '+'}
-    </div>
+    </button>
     )}
     </>
   );
@@ -79,16 +78,15 @@ export function Characters({ player, totalGames }: Props) {
       ))}
       {shouldCondense
     && (
-    <div
+    <button
+      type="button"
+      aria-label="Show fewer characters"
       className="md:mx-1 mx-0.5 p-1 rounded-full border-gray-300 md:border-2 border border-dashed md:h-12 md:w-12 h-4 w-4 text-xs flex flex-col items-center justify-center hover:border-solid hover:text-gray-500 hover:border-gray-500"
       onClick={condenseCharacters}
-      onKeyDown={(e) => e.key === 'Enter' && condenseCharacters()}
-      role="button"
-      tabIndex={0}
     >
       {isSm && 'Hide'}
       {!isSm && '-'}
-    </div>
+    </button>
     )}
     </>
   );

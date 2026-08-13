@@ -113,6 +113,16 @@ describe('HomePage', () => {
     expect(screen.queryByText('Biggest gainers this week')).not.toBeInTheDocument();
   });
 
+  it('has an accessible name for the search box, not just a placeholder', async () => {
+    // Placeholder text isn't reliably exposed as an accessible name to
+    // screen readers - this confirms the <label> association actually
+    // works, which getByPlaceholderText alone wouldn't catch.
+    await renderAndWaitForLoad();
+    expect(screen.getByLabelText('Search by tag or name')).toBe(
+      screen.getByPlaceholderText('Search by tag or name...'),
+    );
+  });
+
   it('filters the visible players by display name', async () => {
     await renderAndWaitForLoad();
 

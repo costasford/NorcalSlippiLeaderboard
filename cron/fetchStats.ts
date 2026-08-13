@@ -1,6 +1,6 @@
-import { getPlayerDataThrottled } from './slippi'
 import * as syncFs from 'fs';
 import * as path from 'path';
+import { getPlayerDataThrottled } from './slippi';
 
 const fs = syncFs.promises;
 
@@ -17,7 +17,7 @@ const getPlayerConnectCodes = async (): Promise<string[]> => {
     const config: PlayerConfig = JSON.parse(configData);
 
     // Validate connect code format (should be XXXX#YYY)
-    const validCodes = config.connectCodes.filter(code => {
+    const validCodes = config.connectCodes.filter((code) => {
       const isValid = /^[A-Z0-9]+#[0-9]+$/.test(code);
       if (!isValid) {
         console.warn(`Invalid connect code format: ${code}`);
@@ -35,19 +35,19 @@ const getPlayerConnectCodes = async (): Promise<string[]> => {
 
 const getPlayers = async () => {
   try {
-    const codes = await getPlayerConnectCodes()
+    const codes = await getPlayerConnectCodes();
     if (codes.length === 0) {
       throw new Error('No valid connect codes found');
     }
 
-    console.log(`Found ${codes.length} player codes`)
-    const allData = codes.map(code => getPlayerDataThrottled(code))
-    const results = await Promise.all(allData.map(p => p.catch(e => {
-      console.error(`Failed to fetch data for player:`, e.message);
+    console.log(`Found ${codes.length} player codes`);
+    const allData = codes.map((code) => getPlayerDataThrottled(code));
+    const results = await Promise.all(allData.map((p) => p.catch((e) => {
+      console.error('Failed to fetch data for player:', e.message);
       return e;
     })));
 
-    const validResults = results.filter(result => !(result instanceof Error));
+    const validResults = results.filter((result) => !(result instanceof Error));
     console.log(`Successfully fetched data for ${validResults.length}/${codes.length} players`);
 
     // getUser returns the User directly (no nested .user), and a valid
@@ -56,15 +56,16 @@ const getPlayers = async () => {
     const unsortedPlayers = validResults
       .filter((data: any) => data?.data?.getUser?.rankedNetplayProfile)
       .map((data: any) => data.data.getUser);
-    console.log(`${unsortedPlayers.length} of ${codes.length} codes returned ranked data`)
+    console.log(`${unsortedPlayers.length} of ${codes.length} codes returned ranked data`);
 
-    return unsortedPlayers.sort((p1, p2) =>
-      p2.rankedNetplayProfile.ratingOrdinal - p1.rankedNetplayProfile.ratingOrdinal)
+    return unsortedPlayers.sort(
+      (p1, p2) => p2.rankedNetplayProfile.ratingOrdinal - p1.rankedNetplayProfile.ratingOrdinal,
+    );
   } catch (error) {
     console.error('Error in getPlayers:', error);
     throw error;
   }
-}
+};
 
 interface HistorySnapshotEntry {
   code: string;
@@ -139,10 +140,12 @@ export async function writeWeeklyMovers(dataDir: string, historyDir: string) {
     return;
   }
 
-  const [comparisonData, latestData]: [HistorySnapshotEntry[], HistorySnapshotEntry[]] = await Promise.all([
-    fs.readFile(path.join(historyDir, comparisonFile), 'utf-8').then(JSON.parse),
-    fs.readFile(path.join(historyDir, latestFile), 'utf-8').then(JSON.parse),
-  ]);
+  const [comparisonData, latestData]: [HistorySnapshotEntry[], HistorySnapshotEntry[]] = (
+    await Promise.all([
+      fs.readFile(path.join(historyDir, comparisonFile), 'utf-8').then(JSON.parse),
+      fs.readFile(path.join(historyDir, latestFile), 'utf-8').then(JSON.parse),
+    ])
+  );
   const comparisonMap = new Map(comparisonData.map((p) => [p.code, p]));
 
   const movers = latestData
@@ -176,9 +179,9 @@ async function main() {
     console.log('Starting player fetch.');
     const players = await getPlayers();
 
-    if(!players.length) {
-      console.log('Error fetching player data. Terminating.')
-      return
+    if (!players.length) {
+      console.log('Error fetching player data. Terminating.');
+      return;
     }
 
     console.log('Player fetch complete.');

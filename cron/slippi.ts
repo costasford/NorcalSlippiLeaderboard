@@ -1,4 +1,4 @@
-import { RateLimiter } from "limiter"
+import { RateLimiter } from 'limiter';
 
 // Slippi's API moved from gql-gateway-dot-slippi.uc.r.appspot.com to
 // internal.slippi.gg at some point after Feb 2023, and the root query
@@ -54,9 +54,9 @@ export const getPlayerData = async (connectCode: string) => {
   return req.json();
 };
 
-const limiter = new RateLimiter({tokensPerInterval: 1, interval: 'second'})
+const limiter = new RateLimiter({ tokensPerInterval: 1, interval: 'second' });
 
 export const getPlayerDataThrottled = async (connectCode: string) => {
-  const remainingRequests = await limiter.removeTokens(1);
-  return getPlayerData(connectCode)
-}
+  await limiter.removeTokens(1);
+  return getPlayerData(connectCode);
+};

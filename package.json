@@ -9,7 +9,7 @@
     "start": "webpack serve",
     "build": "cross-env NODE_ENV=production webpack --progress",
     "deploy": "npm run build && gh-pages -d dist",
-    "lint": "eslint src --ext .ts --ext .tsx",
+    "lint": "eslint src cron --ext .ts --ext .tsx",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

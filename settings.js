@@ -2,6 +2,10 @@ module.exports = {
   // Base application title used in document.title
   title: 'Norcal Ranked Slippi Leaderboard',
 
+  // Used for the meta description and Open Graph/Twitter card tags -
+  // matters for how the link previews when shared (e.g. in Discord).
+  description: "Live leaderboard of NorCal Melee players' Slippi ranked stats - ratings, ranks, and character usage, updated every 8 minutes.",
+
   // use cname option to add CNAME file to webpack build
   // CNAME file allows to use custom domain names with gh-pages, example:
   // cname: 'omatsuri.app'

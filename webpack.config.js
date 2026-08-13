@@ -111,6 +111,14 @@ module.exports = (env = {}) => ({
             <meta http-equiv="X-UA-Compatible" content="IE=edge">
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <title>${settings.title}</title>
+            <meta name="description" content="${settings.description}">
+            <meta property="og:type" content="website">
+            <meta property="og:title" content="${settings.title}">
+            <meta property="og:description" content="${settings.description}">
+            ${settings.repoPath ? `<meta property="og:url" content="${settings.repoPath}">` : ''}
+            <meta name="twitter:card" content="summary">
+            <meta name="twitter:title" content="${settings.title}">
+            <meta name="twitter:description" content="${settings.description}">
           </head>
           <body class="bg-gray-600">
             <noscript>

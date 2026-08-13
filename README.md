@@ -72,6 +72,7 @@ This builds `cron/Dockerfile` and runs `cron/loop.sh`, which fetches on a loop a
 [`settings.js`](./settings.js):
 
 - **title** — base application title
+- **description** — used for the meta description and Open Graph/Twitter card tags, so shared links (e.g. in Discord) show a proper preview
 - **cname** — adds a CNAME file for a custom domain with gh-pages (leave `null` for a plain `username.github.io/repo` deployment)
 - **repoPath** — full URL used as webpack's asset base path for `username.github.io/repoPath` deployments (not used by React Router - see [`App.tsx`](./src/components/App.tsx))
 - **dataBaseUrl** — base URL the frontend fetches leaderboard JSON from at runtime (see above)

@@ -85,7 +85,7 @@ describe('getPlayers', () => {
 
     const players = await getPlayers();
 
-    expect(players.map((p: any) => p.displayName)).toEqual(['High', 'Low']);
+    expect(players.map((p) => p.displayName)).toEqual(['High', 'Low']);
   });
 
   it('skips players whose fetch fails without failing the whole batch', async () => {
@@ -97,6 +97,6 @@ describe('getPlayers', () => {
 
     const players = await getPlayers();
 
-    expect(players.map((p: any) => p.displayName)).toEqual(['Ok']);
+    expect(players.map((p) => p.displayName)).toEqual(['Ok']);
   });
 });

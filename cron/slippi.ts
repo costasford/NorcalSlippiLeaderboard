@@ -1,5 +1,34 @@
 import { RateLimiter } from 'limiter';
 
+export interface SlippiCharacterUsage {
+  character: string;
+  gameCount: number;
+}
+
+export interface SlippiRankedNetplayProfile {
+  ratingOrdinal: number;
+  ratingUpdateCount: number;
+  wins: number;
+  losses: number;
+  dailyGlobalPlacement: number | null;
+  dailyRegionalPlacement: number | null;
+  continent: string | null;
+  characters: SlippiCharacterUsage[];
+}
+
+export interface SlippiUser {
+  displayName: string;
+  connectCode: { code: string };
+  // Absent for accounts that haven't played ranked this season.
+  rankedNetplayProfile: SlippiRankedNetplayProfile | null;
+}
+
+export interface SlippiApiResponse {
+  data: {
+    getUser: SlippiUser | null;
+  };
+}
+
 // Slippi's API moved from gql-gateway-dot-slippi.uc.r.appspot.com to
 // internal.slippi.gg at some point after Feb 2023, and the root query
 // field was renamed getConnectCode -> getUser (which now returns the
@@ -7,7 +36,7 @@ import { RateLimiter } from 'limiter';
 // sub-selection also lost its `id` field. Verified against the current
 // schema in August 2026 - see andross-ssbm/slippy-api for an
 // independently-maintained client confirming the same shape.
-export const getPlayerData = async (connectCode: string) => {
+export const getPlayerData = async (connectCode: string): Promise<SlippiApiResponse> => {
   const query = `fragment userProfilePage on User {
     displayName
     connectCode {

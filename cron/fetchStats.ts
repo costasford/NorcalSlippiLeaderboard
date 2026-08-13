@@ -1,6 +1,8 @@
 import * as syncFs from 'fs';
 import * as path from 'path';
-import { getPlayerDataThrottled } from './slippi';
+import {
+  getPlayerDataThrottled, SlippiApiResponse, SlippiUser, SlippiRankedNetplayProfile,
+} from './slippi';
 
 const fs = syncFs.promises;
 
@@ -47,15 +49,21 @@ export const getPlayers = async () => {
       return e;
     })));
 
-    const validResults = results.filter((result) => !(result instanceof Error));
+    const validResults = results.filter(
+      (result): result is SlippiApiResponse => !(result instanceof Error),
+    );
     console.log(`Successfully fetched data for ${validResults.length}/${codes.length} players`);
 
     // getUser returns the User directly (no nested .user), and a valid
     // account may still have no rankedNetplayProfile if they haven't
     // played ranked this season - skip those rather than crash sorting.
     const unsortedPlayers = validResults
-      .filter((data: any) => data?.data?.getUser?.rankedNetplayProfile)
-      .map((data: any) => data.data.getUser);
+      .map((result) => result.data.getUser)
+      .filter(
+        (user): user is SlippiUser & { rankedNetplayProfile: SlippiRankedNetplayProfile } => (
+          Boolean(user?.rankedNetplayProfile)
+        ),
+      );
     console.log(`${unsortedPlayers.length} of ${codes.length} codes returned ranked data`);
 
     return unsortedPlayers.sort(
@@ -76,8 +84,16 @@ interface HistorySnapshotEntry {
 export const HISTORY_RETENTION_DAYS = 35;
 export const WEEKLY_MOVERS_TARGET_DAYS = 7;
 
-export const toSnapshot = (players: any[]): HistorySnapshotEntry[] => players
-  .filter((p) => p?.rankedNetplayProfile)
+interface SnapshottablePlayer {
+  displayName: string;
+  connectCode: { code: string };
+  rankedNetplayProfile: { ratingOrdinal: number } | null;
+}
+
+export const toSnapshot = (players: SnapshottablePlayer[]): HistorySnapshotEntry[] => players
+  .filter((p): p is SnapshottablePlayer & { rankedNetplayProfile: { ratingOrdinal: number } } => (
+    Boolean(p?.rankedNetplayProfile)
+  ))
   .map((p) => ({
     code: p.connectCode.code,
     name: p.displayName,
@@ -197,8 +213,8 @@ export async function main() {
     try {
       await fs.copyFile(currentFile, previousFile);
       console.log('Saved previous snapshot for rank-movement comparison.');
-    } catch (error: any) {
-      if (error.code !== 'ENOENT') throw error;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
       console.log('No existing data file yet - this must be the first run.');
     }
 

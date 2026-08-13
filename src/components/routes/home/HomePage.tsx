@@ -156,7 +156,18 @@ export default function HomePage() {
             rel="noreferrer"
             className="text-gray-400 hover:text-indigo-700 mr-2 hover:underline"
           >
-            Buy me a coffee
+            Buy the original author a coffee
+          </a>
+          ☕
+        </div>
+        <div>
+          <a
+            href="https://www.buymeacoffee.com/costasford"
+            target="_blank"
+            rel="noreferrer"
+            className="text-gray-400 hover:text-indigo-700 mr-2 hover:underline"
+          >
+            Buy C4D a coffee
           </a>
           ☕
         </div>

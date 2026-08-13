@@ -68,7 +68,13 @@ module.exports = (env = {}) => ({
       'X-Frame-Options': 'DENY',
       'X-XSS-Protection': '1; mode=block',
       'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-      'Content-Security-Policy': "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: https://slp-rank.herokuapp.com; img-src 'self' data:; font-src 'self' data:"
+      // connect-src previously had no explicit value (falling back to the
+      // very restrictive default-src), which silently blocked the dev
+      // server's own HMR websocket *and* the real data/tag-request API
+      // this app actually talks to - `slp-rank.herokuapp.com` above was a
+      // leftover from before this project's current architecture and was
+      // never actually reachable from here.
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: http://127.0.0.1:* http://localhost:* https://68.183.26.83.sslip.io; img-src 'self' data:; font-src 'self' data:"
     },
     allowedHosts: ['localhost', '.localhost', '127.0.0.1']
   },

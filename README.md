@@ -8,6 +8,14 @@ A live leaderboard of NorCal Melee players' Slippi ranked stats, sorted by ratin
 
 Fork of [Grantismo/CoSlippiLeaderboard](https://github.com/Grantismo/CoSlippiLeaderboard), itself built on [react-pages-boilerplate](https://github.com/rtivital/react-pages-boilerplate).
 
+## Features
+
+- **Live rankings** — rank, rating, and character usage breakdown for every tracked player
+- **Search** — filter the leaderboard by connect code or player name
+- **Weekly movers** — biggest rating gainers and fallers over the past week, computed from the daily history snapshots `cron/` writes
+- **Tag requests** — add/remove requests via an on-site form (see below) or a GitHub Issue, no account required either way
+- **Graceful failure handling** — an error boundary keeps a bad player record or a Slippi API hiccup from taking down the whole page
+
 ## How it works
 
 Three independent pieces:

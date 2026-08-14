@@ -110,4 +110,33 @@ describe('Row', () => {
     expect(screen.queryByText('▲', { exact: false })).not.toBeInTheDocument();
     expect(screen.queryByText('▼', { exact: false })).not.toBeInTheDocument();
   });
+
+  it('flags a low set count as still settling', () => {
+    const player = basePlayer({
+      rankedNetplayProfile: { ...basePlayer().rankedNetplayProfile, ratingUpdateCount: 4 },
+    });
+    renderRow(player);
+    expect(screen.getByText('Only 4 sets counted')).toBeInTheDocument();
+  });
+
+  it('does not flag a player with an established set count', () => {
+    renderRow(basePlayer());
+    expect(screen.queryByText(/sets counted/)).not.toBeInTheDocument();
+  });
+
+  it('does not flag an unranked player even with a low count', () => {
+    const player = basePlayer({
+      rankedNetplayProfile: {
+        ratingOrdinal: 0,
+        ratingUpdateCount: 0,
+        wins: 0,
+        losses: 0,
+        dailyGlobalPlacement: null,
+        dailyRegionalPlacement: null,
+        characters: [],
+      },
+    });
+    renderRow(player);
+    expect(screen.queryByText(/sets counted/)).not.toBeInTheDocument();
+  });
 });

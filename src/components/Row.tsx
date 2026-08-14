@@ -6,6 +6,11 @@ interface Props {
   player: Player
 }
 
+// Below this many counted sets, a rating hasn't seen enough games to be
+// very stable yet - worth flagging so a fresh, still-moving rating isn't
+// read the same as an established one.
+const LOW_SET_COUNT_THRESHOLD = 10;
+
 export function Row({ player }: Props) {
   const codeToId = (code: string) => {
     const parts = code.split('#');
@@ -78,6 +83,14 @@ export function Row({ player }: Props) {
           {isActive && Math.floor(player.rankedNetplayProfile.ratingOrdinal)}
           {isActive && (ratingChange ? changePlusMinus(ratingChange) : null)}
         </div>
+        {isActive && player.rankedNetplayProfile.ratingUpdateCount < LOW_SET_COUNT_THRESHOLD && (
+          <div
+            className="text-gray-400 text-[10px] md:text-xs italic"
+            title="This rating is based on very few sets and may still be settling."
+          >
+            {`Only ${player.rankedNetplayProfile.ratingUpdateCount} sets counted`}
+          </div>
+        )}
       </td>
       <td className="md:text-sm text-xs text-gray-300 md:px-6 md:py-4 py-1  md:max-w-[18rem] max-w-[3rem]">
         <Characters player={player} totalGames={totalGames} />

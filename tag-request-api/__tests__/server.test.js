@@ -15,6 +15,7 @@ const {
 
 const BOT_TOKEN = 'test-bot-token';
 const CHANNEL_ID = '123456789';
+const ANNOUNCE_CHANNEL_ID = '987654321';
 const APPROVAL_SECRET = 'test-secret';
 const PUBLIC_BASE_URL = 'https://tag-request.test';
 
@@ -258,6 +259,63 @@ describe('Discord message approval buttons', () => {
     expect(buttons[1]).toMatchObject({ label: 'Reject', style: 5 });
     expect(buttons[0].url).toContain(`${PUBLIC_BASE_URL}/tag-request/approve?token=`);
     expect(buttons[1].url).toContain(`${PUBLIC_BASE_URL}/tag-request/reject?token=`);
+  });
+});
+
+describe('leaderboard announcement on approval', () => {
+  beforeEach(async () => {
+    await stopServer();
+    await startServer({
+      approvalSecret: APPROVAL_SECRET, publicBaseUrl: PUBLIC_BASE_URL, announceChannelId: ANNOUNCE_CHANNEL_ID,
+    });
+  });
+
+  const approveLinkFor = (action, code, overrides = {}) => {
+    const token = signApprovalToken(APPROVAL_SECRET, {
+      action, code, exp: Date.now() + 1000, ...overrides,
+    });
+    return `${baseUrl}/tag-request/approve?token=${encodeURIComponent(token)}`;
+  };
+
+  it('posts an announcement to the announce channel when a code is newly added', async () => {
+    await fetch(approveLinkFor('add', 'NEW#1'));
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    const [calledUrl, options] = fetchImpl.mock.calls[0];
+    expect(calledUrl).toBe(`https://discord.com/api/v10/channels/${ANNOUNCE_CHANNEL_ID}/messages`);
+    expect(options.headers.authorization).toBe(`Bot ${BOT_TOKEN}`);
+    const payload = JSON.parse(options.body);
+    expect(payload.content).toContain('NEW#1');
+    expect(payload.content).toContain('added to');
+  });
+
+  it('does not announce when the code was already on the roster (no-op approve)', async () => {
+    const url = approveLinkFor('add', 'DUP#1');
+    await fetch(url);
+    fetchImpl.mockClear();
+    await fetch(url);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('does not announce on reject', async () => {
+    const token = signApprovalToken(APPROVAL_SECRET, {
+      action: 'add', code: 'SKIP#1', exp: Date.now() + 1000,
+    });
+    await fetch(`${baseUrl}/tag-request/reject?token=${encodeURIComponent(token)}`);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('does not announce when announceChannelId is not configured', async () => {
+    await stopServer();
+    await startServer({ approvalSecret: APPROVAL_SECRET, publicBaseUrl: PUBLIC_BASE_URL });
+    await fetch(approveLinkFor('add', 'NEW#2'));
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('still returns 200 to the user if the announcement post fails', async () => {
+    fetchImpl.mockResolvedValue({ ok: false, status: 500 });
+    const res = await fetch(approveLinkFor('add', 'NEW#3'));
+    expect(res.status).toBe(200);
   });
 });
 

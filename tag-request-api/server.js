@@ -145,6 +145,7 @@ async function applyApproval(rosterPath, { action, code }) {
 function createServer({
   botToken,
   channelId,
+  announceChannelId = null,
   allowedOrigin = 'https://costasford.github.io',
   fetchImpl = fetch,
   requestLog = new Map(),
@@ -243,6 +244,31 @@ function createServer({
     sendJson(res, 200, { ok: true });
   };
 
+  // Best-effort - a failed announcement shouldn't turn an already-successful
+  // approval into an error page, so failures are logged and swallowed here
+  // rather than propagated to the caller.
+  const announceApproval = async (payload) => {
+    if (!announceChannelId) return;
+    const verb = payload.action === 'add' ? 'added to' : 'removed from';
+    try {
+      const discordRes = await fetchImpl(discordMessagesUrl(announceChannelId), {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bot ${botToken}`,
+        },
+        body: JSON.stringify({
+          content: `\`${payload.code}\` was ${verb} the Melee leaderboard.`,
+        }),
+      });
+      if (!discordRes.ok) {
+        throw new Error(`Discord responded ${discordRes.status}`);
+      }
+    } catch (error) {
+      console.error('Failed to post leaderboard announcement:', error);
+    }
+  };
+
   const handleApprovalLink = async (req, res, { apply }) => {
     if (!approvalSecret) {
       sendHtml(res, 500, 'Not configured', 'Approval links are not enabled on this server.');
@@ -262,6 +288,7 @@ function createServer({
     }
 
     const changed = await applyApproval(rosterPath, payload);
+    if (changed) await announceApproval(payload);
     const verb = payload.action === 'add' ? 'added to' : 'removed from';
     const detail = changed
       ? `\`${payload.code}\` will be ${verb} the leaderboard within 8 minutes.`
@@ -338,6 +365,7 @@ if (require.main === module) {
   const server = createServer({
     botToken,
     channelId,
+    announceChannelId: process.env.DISCORD_ANNOUNCE_CHANNEL_ID || null,
     allowedOrigin: process.env.ALLOWED_ORIGIN || 'https://costasford.github.io',
     approvalSecret: process.env.APPROVAL_SECRET || null,
     publicBaseUrl: process.env.PUBLIC_BASE_URL || null,

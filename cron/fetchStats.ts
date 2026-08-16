@@ -100,6 +100,7 @@ interface HistorySnapshotEntry {
   code: string;
   name: string;
   rating: number;
+  rank: number | null;
 }
 
 export const HISTORY_RETENTION_DAYS = 35;
@@ -108,18 +109,35 @@ export const WEEKLY_MOVERS_TARGET_DAYS = 7;
 interface SnapshottablePlayer {
   displayName: string;
   connectCode: { code: string };
-  rankedNetplayProfile: { ratingOrdinal: number } | null;
+  rankedNetplayProfile: { ratingOrdinal: number; wins: number; losses: number } | null;
 }
 
-export const toSnapshot = (players: SnapshottablePlayer[]): HistorySnapshotEntry[] => players
-  .filter((p): p is SnapshottablePlayer & { rankedNetplayProfile: { ratingOrdinal: number } } => (
-    Boolean(p?.rankedNetplayProfile)
-  ))
-  .map((p) => ({
+// Mirrors the frontend's sortAndPopulatePlayers: only players with at least
+// one counted set this season get a rank - an untouched placement rating
+// isn't a ladder position yet, so it's left out of the ranking (though its
+// rating is still recorded, since weekly-movers doesn't care about rank).
+export const toSnapshot = (players: SnapshottablePlayer[]): HistorySnapshotEntry[] => {
+  type RankedSnapshottablePlayer = SnapshottablePlayer & {
+    rankedNetplayProfile: { ratingOrdinal: number; wins: number; losses: number }
+  };
+  const ranked = players.filter(
+    (p): p is RankedSnapshottablePlayer => Boolean(p?.rankedNetplayProfile),
+  );
+
+  const rankByCode = new Map(
+    ranked
+      .filter((p) => p.rankedNetplayProfile.wins + p.rankedNetplayProfile.losses > 0)
+      .sort((a, b) => b.rankedNetplayProfile.ratingOrdinal - a.rankedNetplayProfile.ratingOrdinal)
+      .map((p, i): [string, number] => [p.connectCode.code, i + 1]),
+  );
+
+  return ranked.map((p) => ({
     code: p.connectCode.code,
     name: p.displayName,
     rating: p.rankedNetplayProfile.ratingOrdinal,
+    rank: rankByCode.get(p.connectCode.code) ?? null,
   }));
+};
 
 // One snapshot per calendar day, kept for HISTORY_RETENTION_DAYS, so we can
 // compare "now" against "about a week ago" for a biggest-movers view.
@@ -226,18 +244,7 @@ export async function main() {
     const dataDir = process.env.DATA_DIR || path.join(__dirname, 'data');
     await fs.mkdir(dataDir, { recursive: true });
     const currentFile = path.join(dataDir, 'players.json');
-    const previousFile = path.join(dataDir, 'players-previous.json');
     const timestampFile = path.join(dataDir, 'timestamp.json');
-
-    // Keep the last successful snapshot around so the frontend can show
-    // rank movement between updates. Fine if there's no previous run yet.
-    try {
-      await fs.copyFile(currentFile, previousFile);
-      console.log('Saved previous snapshot for rank-movement comparison.');
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-      console.log('No existing data file yet - this must be the first run.');
-    }
 
     await fs.writeFile(currentFile, JSON.stringify(players, null, 2));
     await fs.writeFile(timestampFile, JSON.stringify({ updated: Date.now() }, null, 2));

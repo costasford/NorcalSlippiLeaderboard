@@ -69,23 +69,7 @@ describe('main', () => {
 
     expect(readJson('players.json')).toHaveLength(1);
     expect(readJson('timestamp.json').updated).toEqual(expect.any(Number));
-    expect(fs.existsSync(path.join(dataDir, 'players-previous.json'))).toBe(false);
     expect(process.exitCode).toBeUndefined();
-  });
-
-  it('creates players-previous.json from a prior run on the next run', async () => {
-    getPlayerDataThrottledMock.mockResolvedValue({
-      data: {
-        getUser: {
-          displayName: 'Someone', connectCode: { code: 'ABCD#123' }, rankedNetplayProfile: { ratingOrdinal: 1500 },
-        },
-      },
-    });
-
-    await main();
-    await main();
-
-    expect(readJson('players-previous.json')).toEqual(readJson('players.json'));
   });
 
   it('does not write players.json when no configured player has ranked data', async () => {

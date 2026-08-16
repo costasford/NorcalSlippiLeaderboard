@@ -56,10 +56,12 @@ const moversData = {
   }],
 };
 
+const todayForTest = new Date().toISOString().slice(0, 10);
+
 const mockFetchResponses = (overrides: Record<string, unknown> = {}) => {
   const responses: Record<string, unknown> = {
     '/players.json': players,
-    '/players-previous.json': [],
+    [`/history/${todayForTest}.json`]: [],
     '/timestamp.json': { updated: Date.now() },
     '/weekly-movers.json': moversData,
     ...overrides,
@@ -193,6 +195,17 @@ describe('HomePage', () => {
     expect(screen.getByTestId('table')).toHaveTextContent('Alpha');
     expect(screen.getByTestId('table')).toHaveTextContent('Beta');
     expect(screen.getByTestId('table')).toHaveTextContent('Charlie');
+  });
+
+  it('requests today\'s history snapshot for rank/rating comparisons, not the old previous-run file', async () => {
+    await renderAndWaitForLoad();
+    const requestedUrls = (global.fetch as jest.Mock).mock.calls.map(([url]) => url);
+    expect(requestedUrls.some(
+      (url: string) => url.endsWith(`/history/${todayForTest}.json`),
+    )).toBe(true);
+    expect(requestedUrls.some(
+      (url: string) => url.endsWith('/players-previous.json'),
+    )).toBe(false);
   });
 
   it('shows an error message when the players fetch fails', async () => {

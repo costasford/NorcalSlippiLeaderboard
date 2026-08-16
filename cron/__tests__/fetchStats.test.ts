@@ -16,10 +16,10 @@ const daysAgoStr = (n: number) => {
   return d.toISOString().slice(0, 10);
 };
 
-const mockPlayer = (code: string, name: string, rating: number) => ({
+const mockPlayer = (code: string, name: string, rating: number, wins = 1, losses = 0) => ({
   displayName: name,
   connectCode: { code },
-  rankedNetplayProfile: { ratingOrdinal: rating },
+  rankedNetplayProfile: { ratingOrdinal: rating, wins, losses },
 });
 
 let tmpDir: string;
@@ -53,10 +53,12 @@ const readWeeklyMovers = () => JSON.parse(
 );
 
 describe('toSnapshot', () => {
-  it('maps players with a ranked profile to {code, name, rating}', () => {
+  it('maps players with a ranked profile to {code, name, rating, rank}', () => {
     const players = [mockPlayer('ABCD#123', 'Someone', 1500.5)];
     expect(toSnapshot(players)).toEqual([
-      { code: 'ABCD#123', name: 'Someone', rating: 1500.5 },
+      {
+        code: 'ABCD#123', name: 'Someone', rating: 1500.5, rank: 1,
+      },
     ]);
   });
 
@@ -66,22 +68,60 @@ describe('toSnapshot', () => {
       { displayName: 'Unranked', connectCode: { code: 'NONE#0' }, rankedNetplayProfile: null },
     ];
     expect(toSnapshot(players)).toEqual([
-      { code: 'ABCD#123', name: 'Ranked', rating: 1500 },
+      {
+        code: 'ABCD#123', name: 'Ranked', rating: 1500, rank: 1,
+      },
+    ]);
+  });
+
+  it('ranks players by rating descending, independent of input order', () => {
+    const players = [
+      mockPlayer('LOW#1', 'Low', 1000),
+      mockPlayer('HIGH#2', 'High', 2000),
+    ];
+    expect(toSnapshot(players)).toEqual([
+      {
+        code: 'LOW#1', name: 'Low', rating: 1000, rank: 2,
+      },
+      {
+        code: 'HIGH#2', name: 'High', rating: 2000, rank: 1,
+      },
+    ]);
+  });
+
+  it('gives a null rank to players with no counted sets, without affecting others', () => {
+    const players = [
+      mockPlayer('PLAYED#1', 'Played', 1500, 5, 3),
+      mockPlayer('FRESH#1', 'Fresh', 1200, 0, 0),
+    ];
+    expect(toSnapshot(players)).toEqual([
+      {
+        code: 'PLAYED#1', name: 'Played', rating: 1500, rank: 1,
+      },
+      {
+        code: 'FRESH#1', name: 'Fresh', rating: 1200, rank: null,
+      },
     ]);
   });
 });
 
 describe('recordHistorySnapshot', () => {
   it('writes a snapshot file for today when none exists yet', async () => {
-    const snapshot = [{ code: 'ABCD#123', name: 'Someone', rating: 1500 }];
+    const snapshot = [{
+      code: 'ABCD#123', name: 'Someone', rating: 1500, rank: 1,
+    }];
     await recordHistorySnapshot(historyDir, snapshot);
     expect(readHistoryFile(daysAgoStr(0))).toEqual(snapshot);
   });
 
   it('does not overwrite an existing snapshot for today', async () => {
-    const original = [{ code: 'ABCD#123', name: 'Someone', rating: 1500 }];
+    const original = [{
+      code: 'ABCD#123', name: 'Someone', rating: 1500, rank: 1,
+    }];
     await recordHistorySnapshot(historyDir, original);
-    await recordHistorySnapshot(historyDir, [{ code: 'ZZZZ#0', name: 'Different', rating: 999 }]);
+    await recordHistorySnapshot(historyDir, [{
+      code: 'ZZZZ#0', name: 'Different', rating: 999, rank: 1,
+    }]);
     expect(readHistoryFile(daysAgoStr(0))).toEqual(original);
   });
 

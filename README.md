@@ -13,6 +13,7 @@ Fork of [Grantismo/CoSlippiLeaderboard](https://github.com/Grantismo/CoSlippiLea
 - **Live rankings** — rank, rating, and character usage breakdown for every tracked player
 - **Search** — filter the leaderboard by connect code or player name
 - **Weekly movers** — biggest rating gainers and fallers over the past week, computed from the daily history snapshots `cron/` writes
+- **Rank/rating change indicators** — per-row arrows and +/- deltas comparing each player against the start of today (the same daily history snapshots), so a change stays visible all day instead of flickering for one ~8-minute cron cycle
 - **Tag requests** — add/remove requests via an on-site form (see below) or a GitHub Issue, no account required either way
 - **Graceful failure handling** — an error boundary keeps a bad player record or a Slippi API hiccup from taking down the whole page
 
@@ -65,7 +66,7 @@ npm install
 DATA_DIR=./cron/data node -r ts-node/register cron/fetchStats.ts
 ```
 
-This fetches every code in `cron/players.json` from Slippi's API (rate-limited to 1 request/second — please don't remove that, Slippi's API is undocumented and unofficial, and hammering it risks it getting locked down for everyone) and writes `players.json`, `players-previous.json`, and `timestamp.json` to `DATA_DIR`.
+This fetches every code in `cron/players.json` from Slippi's API (rate-limited to 1 request/second — please don't remove that, Slippi's API is undocumented and unofficial, and hammering it risks it getting locked down for everyone) and writes `players.json` and `timestamp.json` to `DATA_DIR`, plus a `history/<date>.json` snapshot (see below) the first time it runs on a given UTC day.
 
 ### Run it continuously (how the live site does it)
 
@@ -74,7 +75,7 @@ docker volume create leaderboard_data
 docker compose up -d --build
 ```
 
-This builds `cron/Dockerfile` and runs `cron/loop.sh`, which fetches on a loop and writes to the `leaderboard_data` Docker volume. Whatever serves your frontend needs to expose that volume's `players.json` / `players-previous.json` / `timestamp.json` over HTTP (with CORS allowing your frontend's origin) at the URL configured in `settings.js`'s `dataBaseUrl` — the live deployment does this by mounting the same volume read-only into a Caddy container and adding a `handle_path` route for it.
+This builds `cron/Dockerfile` and runs `cron/loop.sh`, which fetches on a loop and writes to the `leaderboard_data` Docker volume. Whatever serves your frontend needs to expose that volume's `players.json` / `timestamp.json` / `weekly-movers.json` / `history/*.json` over HTTP (with CORS allowing your frontend's origin) at the URL configured in `settings.js`'s `dataBaseUrl` — the live deployment does this by mounting the same volume read-only into a Caddy container and adding a `handle_path` route for it. The frontend fetches `history/<today's date>.json` on every load to compute the rank/rating change indicators, so that file needs to be reachable the same way as `players.json`.
 
 ## Running the tag-request API
 

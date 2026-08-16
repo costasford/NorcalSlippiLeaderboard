@@ -70,9 +70,7 @@ describe('Row', () => {
 
   it('shows a rank-improvement arrow when the rank number decreased', () => {
     const player = basePlayer({
-      oldRankedNetplayProfile: {
-        ...basePlayer().rankedNetplayProfile, rank: 5, ratingOrdinal: 1000,
-      },
+      oldRankedNetplayProfile: { rank: 5, ratingOrdinal: 1000 },
     });
     renderRow(player);
     expect(screen.getByText('▲', { exact: false })).toHaveTextContent('▲ 2');
@@ -81,9 +79,7 @@ describe('Row', () => {
   it('shows a rank-drop arrow when the rank number increased', () => {
     const player = basePlayer({
       rankedNetplayProfile: { ...basePlayer().rankedNetplayProfile, rank: 8 },
-      oldRankedNetplayProfile: {
-        ...basePlayer().rankedNetplayProfile, rank: 5, ratingOrdinal: 1000,
-      },
+      oldRankedNetplayProfile: { rank: 5, ratingOrdinal: 1000 },
     });
     renderRow(player);
     expect(screen.getByText('▼', { exact: false })).toHaveTextContent('▼ 3');
@@ -91,7 +87,7 @@ describe('Row', () => {
 
   it('shows a rating gain indicator with the correct value', () => {
     const player = basePlayer({
-      oldRankedNetplayProfile: { ...basePlayer().rankedNetplayProfile, ratingOrdinal: 950 },
+      oldRankedNetplayProfile: { rank: 3, ratingOrdinal: 950 },
     });
     renderRow(player);
     expect(screen.getByText('+50')).toBeInTheDocument();
@@ -99,7 +95,7 @@ describe('Row', () => {
 
   it('shows a rating loss indicator with the correct value', () => {
     const player = basePlayer({
-      oldRankedNetplayProfile: { ...basePlayer().rankedNetplayProfile, ratingOrdinal: 1080 },
+      oldRankedNetplayProfile: { rank: 3, ratingOrdinal: 1080 },
     });
     renderRow(player);
     expect(screen.getByText('-80')).toBeInTheDocument();
@@ -109,6 +105,19 @@ describe('Row', () => {
     renderRow(basePlayer());
     expect(screen.queryByText('▲', { exact: false })).not.toBeInTheDocument();
     expect(screen.queryByText('▼', { exact: false })).not.toBeInTheDocument();
+  });
+
+  it('suppresses only the rank arrow (not the rating indicator) when the old snapshot has no rank', () => {
+    // A null old rank means the player hadn't played any sets yet when
+    // today's snapshot was taken - no ladder position to compare against,
+    // but their rating movement since then is still meaningful.
+    const player = basePlayer({
+      oldRankedNetplayProfile: { rank: null, ratingOrdinal: 950 },
+    });
+    renderRow(player);
+    expect(screen.queryByText('▲', { exact: false })).not.toBeInTheDocument();
+    expect(screen.queryByText('▼', { exact: false })).not.toBeInTheDocument();
+    expect(screen.getByText('+50')).toBeInTheDocument();
   });
 
   it('flags a low set count as still settling', () => {

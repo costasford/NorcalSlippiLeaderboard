@@ -14,11 +14,19 @@ interface RankedNetplayProfile {
   characters: CharacterStats[];
 }
 
+// The "old" comparison snapshot comes from cron's daily history file (see
+// HistorySnapshotEntry in cron/fetchStats.ts), which only ever has a rank
+// and a rating - never the full live profile.
+export interface OldRankedProfile {
+  rank: number | null;
+  ratingOrdinal: number;
+}
+
 export interface Player {
   displayName: string;
   connectCode: {
     code: string;
   };
   rankedNetplayProfile: RankedNetplayProfile
-  oldRankedNetplayProfile?: RankedNetplayProfile // populated separately
+  oldRankedNetplayProfile?: OldRankedProfile // populated separately
 }

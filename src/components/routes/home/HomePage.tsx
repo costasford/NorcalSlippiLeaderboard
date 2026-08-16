@@ -5,7 +5,7 @@ import { Table } from '../../Table';
 import { WeeklyMovers, WeeklyMoversData } from '../../WeeklyMovers';
 import { ErrorBoundary } from '../../ErrorBoundary';
 import { TagRequestForm } from '../../TagRequestForm';
-import { Player } from '../../../lib/player';
+import { Player, OldRankedProfile } from '../../../lib/player';
 import * as settings from '../../../../settings';
 
 dayjs.extend(relativeTime);
@@ -25,8 +25,15 @@ const sortAndPopulatePlayers = (playerList: Player[]) => {
   return sortedPlayers;
 };
 
-// players-previous.json won't exist yet on a brand new deployment - that's
-// fine, it just means no rank-movement data is shown until the second run.
+interface HistorySnapshotEntry {
+  code: string;
+  rating: number;
+  rank: number | null;
+}
+
+// Used for endpoints that may not exist yet (e.g. today's history file,
+// before the first cron run of the day, or on a brand new deployment) -
+// that's fine, it just means no rank/rating-movement data is shown yet.
 const fetchJson = async (url: string) => {
   const res = await fetch(url);
   if (!res.ok) return null;
@@ -45,9 +52,16 @@ export default function HomePage() {
     const load = async () => {
       try {
         const base = settings.dataBaseUrl;
-        const [playersNew, playersOld, timestamp, movers] = await Promise.all([
+        // Same UTC-date format cron uses for history/<date>.json, so this
+        // always lands on today's snapshot regardless of the viewer's
+        // timezone. Comparing against the start of today (rather than the
+        // prior 8-minute cron run) is what lets the rank arrows and rating
+        // +/- indicators stay visible for a meaningful stretch instead of
+        // flickering for a single cycle.
+        const today = new Date().toISOString().slice(0, 10);
+        const [playersNew, todayHistory, timestamp, movers] = await Promise.all([
           fetchJson(`${base}/players.json`),
-          fetchJson(`${base}/players-previous.json`),
+          fetchJson(`${base}/history/${today}.json`),
           fetchJson(`${base}/timestamp.json`),
           fetchJson(`${base}/weekly-movers.json`),
         ]);
@@ -60,17 +74,19 @@ export default function HomePage() {
           return;
         }
 
-        const rankedPlayersOld = sortAndPopulatePlayers(playersOld || []);
-        const oldPlayersMap = new Map(
-          rankedPlayersOld.map((p) => [p.connectCode.code, p]),
+        const oldDataByCode = new Map<string, OldRankedProfile>(
+          ((todayHistory as HistorySnapshotEntry[]) || []).map((p) => [
+            p.code,
+            { rank: p.rank, ratingOrdinal: p.rating },
+          ]),
         );
 
         const rankedPlayers = sortAndPopulatePlayers(playersNew);
         rankedPlayers.forEach((currentPlayer) => {
           const modifiedPlayer = currentPlayer;
-          const oldData = oldPlayersMap.get(modifiedPlayer.connectCode.code);
+          const oldData = oldDataByCode.get(modifiedPlayer.connectCode.code);
           if (oldData) {
-            modifiedPlayer.oldRankedNetplayProfile = oldData.rankedNetplayProfile;
+            modifiedPlayer.oldRankedNetplayProfile = oldData;
           }
         });
 

@@ -39,10 +39,12 @@ describe('Row', () => {
     expect(screen.getByText('Bronze III')).toBeInTheDocument();
   });
 
-  it('links the player name to their Slippi profile', () => {
+  it('links the player name to their Slippi profile, opening in a new tab', () => {
     renderRow(basePlayer());
     const link = screen.getByText('TestPlayer').closest('a');
     expect(link).toHaveAttribute('href', 'https://slippi.gg/user/test-123');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noreferrer');
   });
 
   it('shows win/loss counts with distinct styling', () => {
@@ -125,12 +127,12 @@ describe('Row', () => {
       rankedNetplayProfile: { ...basePlayer().rankedNetplayProfile, ratingUpdateCount: 4 },
     });
     renderRow(player);
-    expect(screen.getByText('Only 4 sets counted')).toBeInTheDocument();
+    expect(screen.getByText('Rating still settling (4 sets)')).toBeInTheDocument();
   });
 
   it('does not flag a player with an established set count', () => {
     renderRow(basePlayer());
-    expect(screen.queryByText(/sets counted/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/still settling/)).not.toBeInTheDocument();
   });
 
   it('does not flag an unranked player even with a low count', () => {
@@ -146,6 +148,6 @@ describe('Row', () => {
       },
     });
     renderRow(player);
-    expect(screen.queryByText(/sets counted/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/still settling/)).not.toBeInTheDocument();
   });
 });

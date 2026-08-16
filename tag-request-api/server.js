@@ -54,6 +54,20 @@ const sanitizeForDiscord = (value) => value.replace(/@/g, '@​');
 
 const base64url = (buffer) => buffer.toString('base64url');
 
+// Discord's webhook URL (as copied from channel settings) has no API
+// version segment, which silently pins requests to the oldest supported
+// REST API version - one that predates message components, so buttons get
+// dropped with no error at all. Force a modern version whenever the URL
+// matches Discord's own webhook path; leave anything else (e.g. test
+// doubles) untouched.
+const DISCORD_API_VERSION = 10;
+function withDiscordApiVersion(url) {
+  return url.replace(
+    /^(https:\/\/(?:discord|discordapp)\.com\/api)(?:\/v\d+)?(\/webhooks\/.+)$/,
+    `$1/v${DISCORD_API_VERSION}$2`,
+  );
+}
+
 // Signs {action, code, exp} into a compact, tamper-evident token so the
 // Approve/Reject links in the Discord message can carry out (or discard) a
 // specific request without any server-side session state. Anyone with the
@@ -206,7 +220,7 @@ function createServer({
     if (context) lines.push(`Context: ${context}`);
 
     try {
-      const discordRes = await fetchImpl(webhookUrl, {
+      const discordRes = await fetchImpl(withDiscordApiVersion(webhookUrl), {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
@@ -218,6 +232,7 @@ function createServer({
         throw new Error(`Discord responded ${discordRes.status}`);
       }
     } catch (error) {
+      console.error('Failed to post tag request to Discord:', error);
       sendJson(res, 502, { error: 'Could not deliver the request right now. Please try again later.' });
       return;
     }
@@ -266,6 +281,7 @@ function createServer({
       try {
         await handleTagRequest(req, res);
       } catch (error) {
+        console.error('Unexpected error handling tag request:', error);
         sendJson(res, 500, { error: 'Unexpected error.' });
       }
       return;
@@ -275,6 +291,7 @@ function createServer({
       try {
         await handleApprovalLink(req, res, { apply: true });
       } catch (error) {
+        console.error('Unexpected error applying approval:', error);
         sendHtml(res, 500, 'Unexpected error', 'Something went wrong applying this request.');
       }
       return;
@@ -284,6 +301,7 @@ function createServer({
       try {
         await handleApprovalLink(req, res, { apply: false });
       } catch (error) {
+        console.error('Unexpected error processing rejection:', error);
         sendHtml(res, 500, 'Unexpected error', 'Something went wrong processing this request.');
       }
       return;
@@ -294,7 +312,12 @@ function createServer({
 }
 
 module.exports = {
-  createServer, sanitizeForDiscord, CONNECT_CODE_RE, signApprovalToken, verifyApprovalToken,
+  createServer,
+  sanitizeForDiscord,
+  CONNECT_CODE_RE,
+  signApprovalToken,
+  verifyApprovalToken,
+  withDiscordApiVersion,
 };
 
 if (require.main === module) {

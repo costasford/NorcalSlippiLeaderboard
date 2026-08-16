@@ -11,6 +11,7 @@ const os = require('os');
 const path = require('path');
 const {
   createServer, sanitizeForDiscord, CONNECT_CODE_RE, signApprovalToken, verifyApprovalToken,
+  withDiscordApiVersion,
 } = require('../server');
 
 const WEBHOOK_URL = 'https://discord.test/webhook';
@@ -256,6 +257,27 @@ describe('Discord message approval buttons', () => {
     expect(buttons[1]).toMatchObject({ label: 'Reject', style: 5 });
     expect(buttons[0].url).toContain(`${PUBLIC_BASE_URL}/tag-request/approve?token=`);
     expect(buttons[1].url).toContain(`${PUBLIC_BASE_URL}/tag-request/reject?token=`);
+  });
+});
+
+describe('withDiscordApiVersion', () => {
+  it('adds a version segment to a bare Discord webhook URL', () => {
+    expect(withDiscordApiVersion('https://discord.com/api/webhooks/123/abc'))
+      .toBe('https://discord.com/api/v10/webhooks/123/abc');
+  });
+
+  it('replaces an outdated version segment with the current one', () => {
+    expect(withDiscordApiVersion('https://discord.com/api/v6/webhooks/123/abc'))
+      .toBe('https://discord.com/api/v10/webhooks/123/abc');
+  });
+
+  it('leaves an already-current versioned URL unchanged', () => {
+    expect(withDiscordApiVersion('https://discord.com/api/v10/webhooks/123/abc'))
+      .toBe('https://discord.com/api/v10/webhooks/123/abc');
+  });
+
+  it('leaves non-Discord URLs (e.g. test doubles) unchanged', () => {
+    expect(withDiscordApiVersion('https://discord.test/webhook')).toBe('https://discord.test/webhook');
   });
 });
 

@@ -54,18 +54,17 @@ const sanitizeForDiscord = (value) => value.replace(/@/g, '@​');
 
 const base64url = (buffer) => buffer.toString('base64url');
 
-// Discord's webhook URL (as copied from channel settings) has no API
-// version segment, which silently pins requests to the oldest supported
-// REST API version - one that predates message components, so buttons get
-// dropped with no error at all. Force a modern version whenever the URL
-// matches Discord's own webhook path; leave anything else (e.g. test
-// doubles) untouched.
+// Plain Discord "Incoming Webhooks" (the kind created from channel settings)
+// have no owning application identity, and Discord silently drops any
+// `components` field sent through them - the request still succeeds (200,
+// no error), the buttons just never appear. Posting through the bot's own
+// token via the regular channel-message endpoint is the officially
+// supported path for messages with components, confirmed against the real
+// API: same button payload, webhook -> components: [], bot token -> real
+// button objects came back.
 const DISCORD_API_VERSION = 10;
-function withDiscordApiVersion(url) {
-  return url.replace(
-    /^(https:\/\/(?:discord|discordapp)\.com\/api)(?:\/v\d+)?(\/webhooks\/.+)$/,
-    `$1/v${DISCORD_API_VERSION}$2`,
-  );
+function discordMessagesUrl(channelId) {
+  return `https://discord.com/api/v${DISCORD_API_VERSION}/channels/${channelId}/messages`;
 }
 
 // Signs {action, code, exp} into a compact, tamper-evident token so the
@@ -140,11 +139,12 @@ async function applyApproval(rosterPath, { action, code }) {
  * Builds a Node http.Server for the tag-request endpoint.
  * Exported as a factory (rather than a single top-level server instance)
  * so it can be constructed with test doubles - a fake fetchImpl and an
- * isolated rate-limit map - without needing a real Discord webhook or
+ * isolated rate-limit map - without needing a real Discord bot token or
  * bleeding rate-limit state between test cases.
  */
 function createServer({
-  webhookUrl,
+  botToken,
+  channelId,
   allowedOrigin = 'https://costasford.github.io',
   fetchImpl = fetch,
   requestLog = new Map(),
@@ -220,9 +220,12 @@ function createServer({
     if (context) lines.push(`Context: ${context}`);
 
     try {
-      const discordRes = await fetchImpl(withDiscordApiVersion(webhookUrl), {
+      const discordRes = await fetchImpl(discordMessagesUrl(channelId), {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bot ${botToken}`,
+        },
         body: JSON.stringify({
           content: lines.join('\n'),
           components: buildApprovalComponents(action, connectCode),
@@ -317,13 +320,13 @@ module.exports = {
   CONNECT_CODE_RE,
   signApprovalToken,
   verifyApprovalToken,
-  withDiscordApiVersion,
 };
 
 if (require.main === module) {
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
-  if (!webhookUrl) {
-    console.error('DISCORD_WEBHOOK_URL is not set - refusing to start.');
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+  const channelId = process.env.DISCORD_CHANNEL_ID;
+  if (!botToken || !channelId) {
+    console.error('DISCORD_BOT_TOKEN and DISCORD_CHANNEL_ID must both be set - refusing to start.');
     process.exit(1);
   }
 
@@ -333,7 +336,8 @@ if (require.main === module) {
 
   const port = process.env.PORT || 3001;
   const server = createServer({
-    webhookUrl,
+    botToken,
+    channelId,
     allowedOrigin: process.env.ALLOWED_ORIGIN || 'https://costasford.github.io',
     approvalSecret: process.env.APPROVAL_SECRET || null,
     publicBaseUrl: process.env.PUBLIC_BASE_URL || null,

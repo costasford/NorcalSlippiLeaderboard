@@ -13,7 +13,8 @@ services:
       dockerfile: tag-request-api/Dockerfile
     restart: unless-stopped
     environment:
-      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - DISCORD_CHANNEL_ID=${DISCORD_CHANNEL_ID}
       - ALLOWED_ORIGIN=https://costasford.github.io
       - APPROVAL_SECRET=${APPROVAL_SECRET}
       - PUBLIC_BASE_URL=${PUBLIC_BASE_URL}

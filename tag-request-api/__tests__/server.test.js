@@ -11,10 +11,10 @@ const os = require('os');
 const path = require('path');
 const {
   createServer, sanitizeForDiscord, CONNECT_CODE_RE, signApprovalToken, verifyApprovalToken,
-  withDiscordApiVersion,
 } = require('../server');
 
-const WEBHOOK_URL = 'https://discord.test/webhook';
+const BOT_TOKEN = 'test-bot-token';
+const CHANNEL_ID = '123456789';
 const APPROVAL_SECRET = 'test-secret';
 const PUBLIC_BASE_URL = 'https://tag-request.test';
 
@@ -27,7 +27,7 @@ const startServer = (extraOpts = {}) => new Promise((resolve) => {
   fetchImpl = jest.fn().mockResolvedValue({ ok: true, status: 204 });
   rosterPath = path.join(os.tmpdir(), `roster-test-${Date.now()}-${Math.random()}.json`);
   server = createServer({
-    webhookUrl: WEBHOOK_URL, fetchImpl, rosterPath, ...extraOpts,
+    botToken: BOT_TOKEN, channelId: CHANNEL_ID, fetchImpl, rosterPath, ...extraOpts,
   });
   server.listen(0, () => {
     baseUrl = `http://127.0.0.1:${server.address().port}`;
@@ -117,7 +117,7 @@ describe('POST /tag-request validation', () => {
 });
 
 describe('POST /tag-request success', () => {
-  it('forwards a well-formed add request to the webhook and returns 200', async () => {
+  it('forwards a well-formed add request to the bot API and returns 200', async () => {
     const res = await postTagRequest({
       action: 'add',
       connectCode: 'abcd#123',
@@ -130,7 +130,8 @@ describe('POST /tag-request success', () => {
 
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     const [calledUrl, options] = fetchImpl.mock.calls[0];
-    expect(calledUrl).toBe(WEBHOOK_URL);
+    expect(calledUrl).toBe(`https://discord.com/api/v10/channels/${CHANNEL_ID}/messages`);
+    expect(options.headers.authorization).toBe(`Bot ${BOT_TOKEN}`);
     const payload = JSON.parse(options.body);
     expect(payload.content).toContain('Add tag request');
     expect(payload.content).toContain('ABCD#123');
@@ -257,27 +258,6 @@ describe('Discord message approval buttons', () => {
     expect(buttons[1]).toMatchObject({ label: 'Reject', style: 5 });
     expect(buttons[0].url).toContain(`${PUBLIC_BASE_URL}/tag-request/approve?token=`);
     expect(buttons[1].url).toContain(`${PUBLIC_BASE_URL}/tag-request/reject?token=`);
-  });
-});
-
-describe('withDiscordApiVersion', () => {
-  it('adds a version segment to a bare Discord webhook URL', () => {
-    expect(withDiscordApiVersion('https://discord.com/api/webhooks/123/abc'))
-      .toBe('https://discord.com/api/v10/webhooks/123/abc');
-  });
-
-  it('replaces an outdated version segment with the current one', () => {
-    expect(withDiscordApiVersion('https://discord.com/api/v6/webhooks/123/abc'))
-      .toBe('https://discord.com/api/v10/webhooks/123/abc');
-  });
-
-  it('leaves an already-current versioned URL unchanged', () => {
-    expect(withDiscordApiVersion('https://discord.com/api/v10/webhooks/123/abc'))
-      .toBe('https://discord.com/api/v10/webhooks/123/abc');
-  });
-
-  it('leaves non-Discord URLs (e.g. test doubles) unchanged', () => {
-    expect(withDiscordApiVersion('https://discord.test/webhook')).toBe('https://discord.test/webhook');
   });
 });
 

@@ -78,10 +78,10 @@ This builds `cron/Dockerfile` and runs `cron/loop.sh`, which fetches on a loop a
 
 ## Running the tag-request API
 
-[`tag-request-api/`](./tag-request-api) is a small dependency-free Node HTTP service (see [`server.js`](./tag-request-api/server.js)) that validates incoming tag requests (connect code format, field length, per-IP rate limiting) and forwards well-formed ones to a Discord channel via a webhook.
+[`tag-request-api/`](./tag-request-api) is a small dependency-free Node HTTP service (see [`server.js`](./tag-request-api/server.js)) that validates incoming tag requests (connect code format, field length, per-IP rate limiting) and forwards well-formed ones to a Discord channel by posting through a bot token. (Plain incoming webhooks silently drop the Approve/Reject message components - Discord accepts the request but never renders the buttons - so this posts as a bot instead.)
 
 ```bash
-cp .env.example .env   # fill in DISCORD_WEBHOOK_URL, APPROVAL_SECRET, PUBLIC_BASE_URL
+cp .env.example .env   # fill in DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID, APPROVAL_SECRET, PUBLIC_BASE_URL
 docker compose up -d --build tag-request-api
 ```
 

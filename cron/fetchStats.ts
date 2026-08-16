@@ -12,9 +12,30 @@ interface PlayerConfig {
   description: string;
 }
 
+// The roster lives in DATA_DIR (the same persistent volume the fetch output
+// is written to) rather than baked into the image, so the tag-request
+// approval flow can edit it without a rebuild+redeploy. cron/players.json
+// (bundled in the image) is only the initial seed for a fresh volume.
+const getRosterPath = () => {
+  const dataDir = process.env.DATA_DIR || path.join(__dirname, 'data');
+  return path.join(dataDir, 'roster.json');
+};
+
+const seedRosterIfMissing = async (rosterPath: string) => {
+  try {
+    await fs.access(rosterPath);
+  } catch {
+    await fs.mkdir(path.dirname(rosterPath), { recursive: true });
+    const seed = await fs.readFile(path.join(__dirname, 'players.json'), 'utf-8');
+    await fs.writeFile(rosterPath, seed);
+    console.log(`Seeded ${rosterPath} from the bundled default player list.`);
+  }
+};
+
 export const getPlayerConnectCodes = async (): Promise<string[]> => {
   try {
-    const configPath = path.join(__dirname, 'players.json');
+    const configPath = getRosterPath();
+    await seedRosterIfMissing(configPath);
     const configData = await fs.readFile(configPath, 'utf-8');
     const config: PlayerConfig = JSON.parse(configData);
 

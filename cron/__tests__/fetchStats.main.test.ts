@@ -99,12 +99,15 @@ describe('main', () => {
     expect(process.exitCode).toBeUndefined();
   });
 
-  it('sets a non-zero exit code and writes nothing when there are no valid connect codes', async () => {
+  it('sets a non-zero exit code and writes no leaderboard output when there are no valid connect codes', async () => {
     connectCodesJson = playerConfig([]);
 
     await main();
 
-    expect(fs.existsSync(dataDir)).toBe(false);
+    // dataDir itself now exists - getPlayerConnectCodes seeds roster.json
+    // there on first run regardless of whether the roster ends up empty.
+    expect(fs.existsSync(path.join(dataDir, 'players.json'))).toBe(false);
+    expect(fs.existsSync(path.join(dataDir, 'timestamp.json'))).toBe(false);
     expect(process.exitCode).toBe(1);
   });
 });

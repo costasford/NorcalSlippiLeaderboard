@@ -6,24 +6,40 @@
  * doesn't reliably expose Node's built-in fetch, and there's no DOM
  * involved here anyway.
  */
-const { createServer, sanitizeForDiscord, CONNECT_CODE_RE } = require('../server');
+const fs = require('fs/promises');
+const os = require('os');
+const path = require('path');
+const {
+  createServer, sanitizeForDiscord, CONNECT_CODE_RE, signApprovalToken, verifyApprovalToken,
+} = require('../server');
 
 const WEBHOOK_URL = 'https://discord.test/webhook';
+const APPROVAL_SECRET = 'test-secret';
+const PUBLIC_BASE_URL = 'https://tag-request.test';
 
 let server;
 let baseUrl;
 let fetchImpl;
+let rosterPath;
 
-const startServer = () => new Promise((resolve) => {
+const startServer = (extraOpts = {}) => new Promise((resolve) => {
   fetchImpl = jest.fn().mockResolvedValue({ ok: true, status: 204 });
-  server = createServer({ webhookUrl: WEBHOOK_URL, fetchImpl });
+  rosterPath = path.join(os.tmpdir(), `roster-test-${Date.now()}-${Math.random()}.json`);
+  server = createServer({
+    webhookUrl: WEBHOOK_URL, fetchImpl, rosterPath, ...extraOpts,
+  });
   server.listen(0, () => {
     baseUrl = `http://127.0.0.1:${server.address().port}`;
     resolve();
   });
 });
 
-const stopServer = () => new Promise((resolve) => { server.close(resolve); });
+const stopServer = () => new Promise((resolve) => {
+  server.close(async () => {
+    await fs.rm(rosterPath, { force: true });
+    resolve();
+  });
+});
 
 const postTagRequest = (body) => fetch(`${baseUrl}/tag-request`, {
   method: 'POST',
@@ -176,5 +192,140 @@ describe('rate limiting', () => {
     const statuses = responses.map((r) => r.status);
     expect(statuses.filter((s) => s === 200)).toHaveLength(5);
     expect(statuses.filter((s) => s === 429)).toHaveLength(2);
+  });
+});
+
+describe('signApprovalToken / verifyApprovalToken', () => {
+  it('round-trips a valid payload', () => {
+    const token = signApprovalToken(APPROVAL_SECRET, {
+      action: 'add', code: 'ABCD#123', exp: Date.now() + 1000,
+    });
+    expect(verifyApprovalToken(APPROVAL_SECRET, token)).toEqual(
+      expect.objectContaining({ action: 'add', code: 'ABCD#123' }),
+    );
+  });
+
+  it('rejects a token signed with a different secret', () => {
+    const token = signApprovalToken('other-secret', {
+      action: 'add', code: 'ABCD#123', exp: Date.now() + 1000,
+    });
+    expect(verifyApprovalToken(APPROVAL_SECRET, token)).toBeNull();
+  });
+
+  it('rejects a payload tampered with after signing', () => {
+    const token = signApprovalToken(APPROVAL_SECRET, {
+      action: 'add', code: 'ABCD#123', exp: Date.now() + 1000,
+    });
+    const [, sig] = token.split('.');
+    const tamperedBody = Buffer.from(JSON.stringify({
+      action: 'add', code: 'EVIL#999', exp: Date.now() + 1000,
+    })).toString('base64url');
+    expect(verifyApprovalToken(APPROVAL_SECRET, `${tamperedBody}.${sig}`)).toBeNull();
+  });
+
+  it('rejects an expired token', () => {
+    const token = signApprovalToken(APPROVAL_SECRET, {
+      action: 'add', code: 'ABCD#123', exp: Date.now() - 1000,
+    });
+    expect(verifyApprovalToken(APPROVAL_SECRET, token)).toBeNull();
+  });
+
+  it('rejects a malformed or missing token', () => {
+    expect(verifyApprovalToken(APPROVAL_SECRET, 'not-a-token')).toBeNull();
+    expect(verifyApprovalToken(APPROVAL_SECRET, undefined)).toBeNull();
+  });
+});
+
+describe('Discord message approval buttons', () => {
+  it('omits components when APPROVAL_SECRET/PUBLIC_BASE_URL are not configured', async () => {
+    await postTagRequest({ action: 'add', connectCode: 'ABCD#123' });
+    const payload = JSON.parse(fetchImpl.mock.calls[0][1].body);
+    expect(payload.components).toBeUndefined();
+  });
+
+  it('includes Approve/Reject link buttons when configured', async () => {
+    await stopServer();
+    await startServer({ approvalSecret: APPROVAL_SECRET, publicBaseUrl: PUBLIC_BASE_URL });
+
+    await postTagRequest({ action: 'add', connectCode: 'ABCD#123' });
+    const payload = JSON.parse(fetchImpl.mock.calls[0][1].body);
+
+    const buttons = payload.components[0].components;
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0]).toMatchObject({ label: 'Approve', style: 5 });
+    expect(buttons[1]).toMatchObject({ label: 'Reject', style: 5 });
+    expect(buttons[0].url).toContain(`${PUBLIC_BASE_URL}/tag-request/approve?token=`);
+    expect(buttons[1].url).toContain(`${PUBLIC_BASE_URL}/tag-request/reject?token=`);
+  });
+});
+
+describe('GET /tag-request/approve and /reject', () => {
+  beforeEach(async () => {
+    await stopServer();
+    await startServer({ approvalSecret: APPROVAL_SECRET, publicBaseUrl: PUBLIC_BASE_URL });
+  });
+
+  const approveLinkFor = (action, code, overrides = {}) => {
+    const token = signApprovalToken(APPROVAL_SECRET, {
+      action, code, exp: Date.now() + 1000, ...overrides,
+    });
+    return `${baseUrl}/tag-request/approve?token=${encodeURIComponent(token)}`;
+  };
+
+  it('adds a connect code to a fresh roster on approve', async () => {
+    const res = await fetch(approveLinkFor('add', 'NEW#1'));
+    expect(res.status).toBe(200);
+    const roster = JSON.parse(await fs.readFile(rosterPath, 'utf-8'));
+    expect(roster.connectCodes).toContain('NEW#1');
+  });
+
+  it('is idempotent - approving the same add twice does not duplicate the code', async () => {
+    const url = approveLinkFor('add', 'DUP#1');
+    await fetch(url);
+    await fetch(url);
+    const roster = JSON.parse(await fs.readFile(rosterPath, 'utf-8'));
+    expect(roster.connectCodes.filter((c) => c === 'DUP#1')).toHaveLength(1);
+  });
+
+  it('removes a connect code on approve', async () => {
+    await fs.writeFile(rosterPath, JSON.stringify({ connectCodes: ['GONE#1', 'STAY#2'] }));
+    const res = await fetch(approveLinkFor('remove', 'GONE#1'));
+    expect(res.status).toBe(200);
+    const roster = JSON.parse(await fs.readFile(rosterPath, 'utf-8'));
+    expect(roster.connectCodes).toEqual(['STAY#2']);
+  });
+
+  it('removing an absent code is a harmless no-op', async () => {
+    await fs.writeFile(rosterPath, JSON.stringify({ connectCodes: ['STAY#2'] }));
+    const res = await fetch(approveLinkFor('remove', 'ABSENT#1'));
+    expect(res.status).toBe(200);
+    const roster = JSON.parse(await fs.readFile(rosterPath, 'utf-8'));
+    expect(roster.connectCodes).toEqual(['STAY#2']);
+  });
+
+  it('rejects an expired token with 400 and makes no change', async () => {
+    const res = await fetch(approveLinkFor('add', 'NOPE#1', { exp: Date.now() - 1000 }));
+    expect(res.status).toBe(400);
+    await expect(fs.access(rosterPath)).rejects.toThrow();
+  });
+
+  it('the reject link verifies the token but never touches the roster', async () => {
+    const token = signApprovalToken(APPROVAL_SECRET, {
+      action: 'add', code: 'SKIP#1', exp: Date.now() + 1000,
+    });
+    const res = await fetch(`${baseUrl}/tag-request/reject?token=${encodeURIComponent(token)}`);
+    expect(res.status).toBe(200);
+    await expect(fs.access(rosterPath)).rejects.toThrow();
+  });
+
+  it('returns 500 for approve links when approvals are not configured', async () => {
+    await stopServer();
+    await startServer();
+
+    const token = signApprovalToken('irrelevant-since-unconfigured', {
+      action: 'add', code: 'ABCD#123', exp: Date.now() + 1000,
+    });
+    const res = await fetch(`${baseUrl}/tag-request/approve?token=${encodeURIComponent(token)}`);
+    expect(res.status).toBe(500);
   });
 });

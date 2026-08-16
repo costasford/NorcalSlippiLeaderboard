@@ -38,7 +38,7 @@ This is a meaningfully different architecture than the original fork: the old ve
 
 ## Requesting a tag be added or removed
 
-Click **"Request a tag be added or removed"** on the site itself — it expands into a small form (no GitHub account needed) that posts straight to a private Discord channel via [`tag-request-api/`](./tag-request-api). A [GitHub Issue](https://github.com/costasford/NorcalSlippiLeaderboard/issues/new?template=tag-request.yml) link is still offered alongside it for people who'd rather use that. Either way, requests are reviewed manually and, if approved, added to `cron/players.json`.
+Click **"Request a tag be added or removed"** on the site itself — it expands into a small form (no GitHub account needed) that posts straight to a private Discord channel via [`tag-request-api/`](./tag-request-api). A [GitHub Issue](https://github.com/costasford/NorcalSlippiLeaderboard/issues/new?template=tag-request.yml) link is still offered alongside it for people who'd rather use that. Either way, a human still reviews every request, but approving one is now a single click: the Discord message carries **Approve**/**Reject** buttons (see [Running the tag-request API](#running-the-tag-request-api)), and clicking Approve writes straight to the shared roster - no manual file edit or redeploy needed.
 
 ## Local development
 
@@ -56,7 +56,7 @@ To point your local dev build at a different data source (e.g. while testing), e
 
 ## Running the data-fetch cron job
 
-The player list lives in [`cron/players.json`](./cron/players.json) — a flat array of Slippi connect codes (`connectCodes`). To add or remove players directly (rather than going through a tag request), edit that file.
+The player list is a flat array of Slippi connect codes (`connectCodes`), stored as `roster.json` in `DATA_DIR` (the same volume the fetch output is written to) rather than baked into the image - that's what lets the tag-request approval flow (see below) edit it live. [`cron/players.json`](./cron/players.json) is only the *default* list, copied into `DATA_DIR/roster.json` the first time the job runs against an empty volume. To add or remove players directly (rather than going through a tag request), edit `roster.json` in the volume - editing `cron/players.json` after that first run has no effect until the volume is wiped.
 
 ### Run it once, locally
 
@@ -81,11 +81,20 @@ This builds `cron/Dockerfile` and runs `cron/loop.sh`, which fetches on a loop a
 [`tag-request-api/`](./tag-request-api) is a small dependency-free Node HTTP service (see [`server.js`](./tag-request-api/server.js)) that validates incoming tag requests (connect code format, field length, per-IP rate limiting) and forwards well-formed ones to a Discord channel via a webhook.
 
 ```bash
-cp .env.example .env   # fill in DISCORD_WEBHOOK_URL - see the comment in that file
+cp .env.example .env   # fill in DISCORD_WEBHOOK_URL, APPROVAL_SECRET, PUBLIC_BASE_URL
 docker compose up -d --build tag-request-api
 ```
 
 In production this container joins the same Docker network as the FlowCRM project's Caddy instance (see `docker-compose.yml`'s `flowcrm_default` external network) so Caddy can `reverse_proxy` `/tag-request` to it by container name - adjust that if you're deploying somewhere else.
+
+### One-click approval
+
+If `APPROVAL_SECRET` and `PUBLIC_BASE_URL` are both set, every Discord message gets **Approve**/**Reject** link buttons alongside the request details. The link encodes the request (action, connect code, a 7-day expiry) as an HMAC-signed token — there's no database, so anyone with the raw URL could act on it, which is why it's only ever posted into the private Discord channel. Clicking:
+
+- **Approve** — verifies the token, then adds or removes the connect code in `DATA_DIR/roster.json` (shared with `leaderboard-cron` via the `leaderboard_data` volume — see `docker-compose.yml`). The change is picked up on the cron job's next loop, so within 8 minutes.
+- **Reject** — verifies the token but makes no change; just a dead-end confirmation page.
+
+Clicking Approve twice (or clicking it after someone already hand-edited `roster.json` to the same effect) is a safe no-op — applying the same add/remove twice doesn't double up or error. Leave `APPROVAL_SECRET`/`PUBLIC_BASE_URL` unset to disable the buttons entirely; requests still post to Discord, and approving one goes back to editing `roster.json` by hand.
 
 ## Settings
 

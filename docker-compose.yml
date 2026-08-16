@@ -15,6 +15,13 @@ services:
     environment:
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
       - ALLOWED_ORIGIN=https://costasford.github.io
+      - APPROVAL_SECRET=${APPROVAL_SECRET}
+      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL}
+    volumes:
+      # Shares the roster file with leaderboard-cron so an approved tag
+      # request can be written straight to the volume both containers see -
+      # no rebuild or redeploy needed to pick it up.
+      - leaderboard_data:/data
     networks:
       - default
       # So Caddy (running in the FlowCRM compose project) can reverse_proxy

@@ -5,6 +5,9 @@ import { getPlayerConnectCodes, getPlayers } from '../fetchStats';
 jest.mock('fs', () => ({
   promises: {
     readFile: jest.fn(),
+    access: jest.fn(),
+    mkdir: jest.fn(),
+    writeFile: jest.fn(),
   },
 }));
 
@@ -13,6 +16,7 @@ jest.mock('../slippi', () => ({
 }));
 
 const readFileMock = fs.promises.readFile as jest.Mock;
+const accessMock = fs.promises.access as jest.Mock;
 const getPlayerDataThrottledMock = getPlayerDataThrottled as jest.Mock;
 
 const playerConfig = (connectCodes: string[]) => JSON.stringify({
@@ -23,6 +27,9 @@ const playerConfig = (connectCodes: string[]) => JSON.stringify({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // Roster file already exists in the volume - skip the seed-from-bundled-
+  // default path in these tests, it's covered separately below.
+  accessMock.mockResolvedValue(undefined);
   jest.spyOn(console, 'log').mockImplementation(() => {});
   jest.spyOn(console, 'warn').mockImplementation(() => {});
   jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -53,6 +60,18 @@ describe('getPlayerConnectCodes', () => {
   it('returns an empty array if the config file has invalid JSON', async () => {
     readFileMock.mockResolvedValue('not valid json');
     expect(await getPlayerConnectCodes()).toEqual([]);
+  });
+
+  it('seeds the roster from the bundled default when the volume file is missing', async () => {
+    const writeFileMock = fs.promises.writeFile as jest.Mock;
+    const mkdirMock = fs.promises.mkdir as jest.Mock;
+    accessMock.mockRejectedValue(new Error('ENOENT'));
+    readFileMock.mockResolvedValue(playerConfig(['SEED#1']));
+
+    expect(await getPlayerConnectCodes()).toEqual(['SEED#1']);
+
+    expect(mkdirMock).toHaveBeenCalledWith(expect.any(String), { recursive: true });
+    expect(writeFileMock).toHaveBeenCalledWith(expect.any(String), playerConfig(['SEED#1']));
   });
 });
 
